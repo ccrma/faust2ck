@@ -289,12 +289,13 @@ int write_header(char *filename, char *lines[])
 {
     FILE * file = NULL;
     int r = 0;
+    int i = 0;
     
     file = fopen(filename, "w");
     if(file == NULL)
         goto error;
     
-    for(int i = 0; lines[i] != NULL; i++)
+    for(i = 0; lines[i] != NULL; i++)
     {
         if(fprintf(file, "%s\n", lines[i]) < 0)
             goto error;
@@ -321,6 +322,8 @@ int main(int argc, char *argv[])
     char basename[BUF_SIZE];
     int result = 0;
     out = stdout;
+
+    variables.next = NULL;
     
     if (argc != 2) {
         printf("Usage: faust2ck <filename.dsp>\n");
@@ -439,6 +442,7 @@ int main(int argc, char *argv[])
     do_template(chuck_faust_template);
     
     fclose(out);
+    out = NULL;
     
     snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
              outfilename, dspfilename, dspfilename);
@@ -451,7 +455,7 @@ int main(int argc, char *argv[])
         goto error;
     }
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
     snprintf(cmd, BUF_SIZE, "clang++ -D__MACOSX_CORE__ -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              basename, dspfilename);
     //printf("%s\n", cmd);
@@ -463,6 +467,22 @@ int main(int argc, char *argv[])
         goto error;
     }
     
+#elif defined(__linux__)
+    snprintf(cmd, BUF_SIZE, "g++ -D__LINUX_ALSA__ -I.faust2ck_tmp -shared -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+             basename, dspfilename);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to compile .cpp file\n");
+        rc = 5;
+        goto error;
+    }
+
+#else
+
+#error no target platform (e.g. Mac OS or Linux)
+
 #endif
     
 error:
