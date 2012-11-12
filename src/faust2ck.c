@@ -8,25 +8,21 @@ char *chuck_faust_template[] = {
 NULL
 };
 
-char *ctrl_cget_query[] = {
-    "\n  func = make_new_mfun( \"float\", \"%var_label%\",",
-    "                          %dsp_name%_ctrl_%var_name% );",
-    "    func->add_arg( \"float\", \"%var_label%\" );",
-    "    if (!type_engine_import_mfun( env, func ))",
-    "        goto error;",
-NULL
+char *ctrl_cget_query[] = {"\n\
+    QUERY->add_mfun( QUERY, %dsp_name%_ctrl_%var_name% , \"float\", \"%var_label%\" );\n\
+    QUERY->add_arg( QUERY, \"float\", \"%var_label%\" );\n\
+    ",
+    NULL
 };
 
 char *ctrl_cget_funcs[] = {
-    "static void %dsp_name%_ctrl_%var_name%( Chuck_Object * SELF, void * ARGS,",
-    "                                        Chuck_DL_Return * RETURN,",
-    "                                        Chuck_VM_Shred * SHRED)",
-    "{",
-    "    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);",
-    "    d->%var_name% = (SAMPLE)GET_CK_FLOAT(ARGS);",
-    "    RETURN->v_float = (t_CKFLOAT)(d->%var_name%);",
-    "}\n",
-NULL
+"CK_DLL_MFUN(%dsp_name%_ctrl_%var_name%)\n\
+{\n\
+    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);\n\
+    d->%var_name% = (SAMPLE)GET_CK_FLOAT(ARGS);\n\
+    RETURN->v_float = (t_CKFLOAT)(d->%var_name%);\n\
+}\n",
+    NULL
 };
 
 
