@@ -101,6 +101,8 @@
 "//    float * input, * output;",
 "//    input = &in;",
 "//    output = out;",
+"    ",
+"    // TODO: proper multichannel handling",
 "	d->compute(nframes, &in, &out);",
 "    return TRUE;",
 "}",

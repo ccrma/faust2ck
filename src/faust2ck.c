@@ -262,15 +262,49 @@ int main(int argc, char *argv[])
 {
     int i, rc=0;
     FILE *fxml = 0;
+#define BUF_SIZE 1024
+    char cmd[BUF_SIZE];
+    char xmlfilepath[BUF_SIZE];
+    char *dspfilename;
+    char basename[BUF_SIZE];
     out = stdout;
-
+    
     if (argc != 2) {
-        printf("Usage: faust2ck <filename.dsp.xml>\n");
+        printf("Usage: faust2ck <filename.dsp>\n");
         rc = 1;
         goto error;
     }
+    
+    snprintf(cmd, BUF_SIZE, "mkdir .faust2ck_tmp");
+    printf("%s\n", cmd);
+    system(cmd);
+    
+    snprintf(cmd, BUF_SIZE, "cp '%s' .faust2ck_tmp/", argv[1]);
+    printf("%s\n", cmd);
+    system(cmd);
+    
+    dspfilename = strrchr(argv[1], '/');
+    if(dspfilename == NULL) // '/' not found
+        dspfilename = argv[1];
+    else
+        dspfilename = dspfilename+1;
+    if(strrchr(dspfilename, '.') == NULL) // '.' not found
+        strncpy(basename, dspfilename, BUF_SIZE);
+    else
+    {
+        int basenamelen = strrchr(dspfilename, '.') - dspfilename;
+        strncpy(basename, dspfilename, basenamelen);
+        basename[basenamelen] = '\0';
+    }
+    
+    snprintf(cmd, BUF_SIZE, "faust -xml '.faust2ck_tmp/%s' > /dev/null", dspfilename);
+    printf("%s\n", cmd);
+    system(cmd);
+    
+    snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
+    
+    fxml = fopen(xmlfilepath, "r");
 
-    fxml = fopen(argv[1], "r");
     if (!fxml) {
         printf("Error: Could not open %s.\n", argv[1]);
         rc = 2;
@@ -287,7 +321,7 @@ int main(int argc, char *argv[])
     fxml = 0;
 
     // determine output file name
-    strcpy(outfilename, argv[1]);
+    strcpy(outfilename, xmlfilepath);
     i=strlen(outfilename)-1;
     while (i>0 && outfilename[i]!='.')
         i--;
@@ -302,9 +336,26 @@ int main(int argc, char *argv[])
     }
 
     do_template(chuck_faust_template);
+    
+    fclose(out);
+    
+    snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
+             outfilename, dspfilename, dspfilename);
+    printf("%s\n", cmd);
+    system(cmd);
 
+#ifdef __APPLE__
+    snprintf(cmd, BUF_SIZE, "clang++ -D__MACOSX_CORE__ -I/Users/spencer/src/ccrma-chugins/chuck/include/ -arch i386 -arch x86_64 -shared -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+             basename, dspfilename);
+    printf("%s\n", cmd);
+    system(cmd);
+    
+#endif
+    
   error:
-
+    
+    system("rm -rf .faust2ck_tmp");
+    
     if (fxml)
         fclose(fxml);
 
