@@ -6,3 +6,13 @@
 src/faust2ck
 
 *.chug
+
+src/chuck_def_h.h
+
+src/chuck_dl_h.h
+
+src/chuck_oo_h.h
+
+src/util_thread_h.h
+
+src/chuck_faust.template.h

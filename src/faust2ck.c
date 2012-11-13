@@ -9,6 +9,8 @@ NULL
 };
 
 char *ctrl_cget_query[] = {"\n\
+    QUERY->add_mfun( QUERY, %dsp_name%_cget_%var_name% , \"float\", \"%var_label%\" );\n\
+    \n\
     QUERY->add_mfun( QUERY, %dsp_name%_ctrl_%var_name% , \"float\", \"%var_label%\" );\n\
     QUERY->add_arg( QUERY, \"float\", \"%var_label%\" );\n\
     ",
@@ -21,7 +23,32 @@ char *ctrl_cget_funcs[] = {
     %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);\n\
     d->%var_name% = (SAMPLE)GET_CK_FLOAT(ARGS);\n\
     RETURN->v_float = (t_CKFLOAT)(d->%var_name%);\n\
-}\n",
+}\n\
+\n\
+CK_DLL_MFUN(%dsp_name%_cget_%var_name%)\n\
+{\n\
+    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);\n\
+    RETURN->v_float = (t_CKFLOAT)(d->%var_name%);\n\
+}\n\
+\n",
+    NULL
+};
+
+// built-in chuck headers
+char *chuck_dl_h[] = {
+#include "chuck_dl_h.h"
+    NULL
+};
+char *chuck_oo_h[] = {
+#include "chuck_oo_h.h"
+    NULL
+};
+char *chuck_def_h[] = {
+#include "chuck_def_h.h"
+    NULL
+};
+char *util_thread_h[] = {
+#include "util_thread_h.h"
     NULL
 };
 
@@ -258,6 +285,31 @@ void do_template(char *template[])
     }
 }
 
+int write_header(char *filename, char *lines[])
+{
+    FILE * file = NULL;
+    int r = 0;
+    
+    file = fopen(filename, "w");
+    if(file == NULL)
+        goto error;
+    
+    for(int i = 0; lines[i] != NULL; i++)
+    {
+        if(fprintf(file, "%s\n", lines[i]) < 0)
+            goto error;
+    }
+    
+    r = 1;
+    
+error:
+    
+    if(file)
+        fclose(file);
+    
+    return r;
+}
+
 int main(int argc, char *argv[])
 {
     int i, rc=0;
@@ -267,6 +319,7 @@ int main(int argc, char *argv[])
     char xmlfilepath[BUF_SIZE];
     char *dspfilename;
     char basename[BUF_SIZE];
+    int result = 0;
     out = stdout;
     
     if (argc != 2) {
@@ -275,13 +328,55 @@ int main(int argc, char *argv[])
         goto error;
     }
     
+    system("rm -rf .faust2ck_tmp");
+
     snprintf(cmd, BUF_SIZE, "mkdir .faust2ck_tmp");
-    printf("%s\n", cmd);
-    system(cmd);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to make temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
     
     snprintf(cmd, BUF_SIZE, "cp '%s' .faust2ck_tmp/", argv[1]);
-    printf("%s\n", cmd);
-    system(cmd);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to copy .dsp file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+    
+    if(!write_header(".faust2ck_tmp/chuck_dl.h", chuck_dl_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+    
+    if(!write_header(".faust2ck_tmp/chuck_def.h", chuck_def_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+    
+    if(!write_header(".faust2ck_tmp/chuck_oo.h", chuck_oo_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+    
+    if(!write_header(".faust2ck_tmp/util_thread.h", util_thread_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
     
     dspfilename = strrchr(argv[1], '/');
     if(dspfilename == NULL) // '/' not found
@@ -298,8 +393,14 @@ int main(int argc, char *argv[])
     }
     
     snprintf(cmd, BUF_SIZE, "faust -xml '.faust2ck_tmp/%s' > /dev/null", dspfilename);
-    printf("%s\n", cmd);
-    system(cmd);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to generate XML file\n");
+        rc = 5;
+        goto error;
+    }
     
     snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
     
@@ -341,18 +442,30 @@ int main(int argc, char *argv[])
     
     snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
              outfilename, dspfilename, dspfilename);
-    printf("%s\n", cmd);
-    system(cmd);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to generate .cpp file\n");
+        rc = 5;
+        goto error;
+    }
 
 #ifdef __APPLE__
-    snprintf(cmd, BUF_SIZE, "clang++ -D__MACOSX_CORE__ -I/Users/spencer/src/ccrma-chugins/chuck/include/ -arch i386 -arch x86_64 -shared -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "clang++ -D__MACOSX_CORE__ -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              basename, dspfilename);
-    printf("%s\n", cmd);
-    system(cmd);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to compile .cpp file\n");
+        rc = 5;
+        goto error;
+    }
     
 #endif
     
-  error:
+error:
     
     system("rm -rf .faust2ck_tmp");
     
