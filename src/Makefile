@@ -16,4 +16,4 @@ clean:
 	rm -rf faust2ck *.o chuck_faust.template.h $(CHUCK_HEADER_HEADERS)
 
 install: faust2ck
-	cp -f faust2ck /usr/bin/
+	cp -f faust2ck /usr/local/bin/
