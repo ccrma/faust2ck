@@ -50,7 +50,12 @@ public:
 	bool stopped() 	{ return fStopped; }
 };
 
-class dsp { public: float fSamplingFreq; };
+class dsp {
+public:
+    float fSamplingFreq;
+    SAMPLE ** ck_frame_in;
+    SAMPLE ** ck_frame_out;
+};
 
 /*
  * FAUST intrinsic
@@ -83,6 +88,7 @@ class dsp { public: float fSamplingFreq; };
  */
 static t_CKUINT %dsp_name%_offset_data = 0;
 static int g_sr = 44100;
+static int g_nChans = 1;
 
 CK_DLL_CTOR(%dsp_name%_ctor)
 {
@@ -90,6 +96,8 @@ CK_DLL_CTOR(%dsp_name%_ctor)
     %dsp_name% *d = new %dsp_name%;
     OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data) = (t_CKUINT)d;
     d->init(g_sr);
+    d->ck_frame_in = new SAMPLE*[g_nChans];
+    d->ck_frame_out = new SAMPLE*[g_nChans];
 }
 
 CK_DLL_DTOR(%dsp_name%_dtor)
@@ -101,12 +109,19 @@ CK_DLL_DTOR(%dsp_name%_dtor)
 CK_DLL_TICKF(%dsp_name%_tickf)
 {
     %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
-//    float * input, * output;
-//    input = &in;
-//    output = out;
     
-    // TODO: proper multichannel handling
-	d->compute(nframes, &in, &out);
+    for(int f = 0; f < nframes; f++)
+    {
+        // fake-deinterleave
+        for(int c = 0; c < g_nChans; c++)
+        {
+            d->ck_frame_in[c] = &in[f*g_nChans+c];
+            d->ck_frame_out[c] = &out[f*g_nChans+c];
+        }
+        
+        d->compute(1, d->ck_frame_in, d->ck_frame_out);
+    }
+    
     return TRUE;
 }
 
@@ -125,7 +140,9 @@ CK_DLL_QUERY(%dsp_name%_query)
     QUERY->add_ctor(QUERY, %dsp_name%_ctor);
     QUERY->add_dtor(QUERY, %dsp_name%_dtor);
     
-    QUERY->add_ugen_funcf(QUERY, %dsp_name%_tickf, NULL, temp.getNumInputs(), temp.getNumOutputs());
+    g_nChans = std::max(temp.getNumInputs(), temp.getNumOutputs());
+    
+    QUERY->add_ugen_funcf(QUERY, %dsp_name%_tickf, NULL, g_nChans, g_nChans);
 
     // add member variable
     %dsp_name%_offset_data = QUERY->add_mvar( QUERY, "int", "@%dsp_name%_data", FALSE );
