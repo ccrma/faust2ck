@@ -170,10 +170,30 @@ CK_DLL_CTOR(%dsp_name%_ctor)
 
 CK_DLL_DTOR(%dsp_name%_dtor)
 {
-    delete (%dsp_name%*) OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
+    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
+
+    delete[] d->ck_frame_in;
+    delete[] d->ck_frame_out;
+    
+    delete d;
+    
     OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data) = 0;
 }
 
+// mono tick
+CK_DLL_TICK(%dsp_name%_tick)
+{
+    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
+    
+    d->ck_frame_in[0] = &in;
+    d->ck_frame_out[0] = out;
+
+    d->compute(1, d->ck_frame_in, d->ck_frame_out);
+    
+    return TRUE;
+}
+
+// multichannel tick
 CK_DLL_TICKF(%dsp_name%_tickf)
 {
     %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
@@ -210,7 +230,10 @@ CK_DLL_QUERY(%dsp_name%_query)
     
     g_nChans = std::max(temp.getNumInputs(), temp.getNumOutputs());
     
-    QUERY->add_ugen_funcf(QUERY, %dsp_name%_tickf, NULL, g_nChans, g_nChans);
+    if(g_nChans == 1)
+        QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
+    else
+        QUERY->add_ugen_funcf(QUERY, %dsp_name%_tickf, NULL, g_nChans, g_nChans);
 
     // add member variable
     %dsp_name%_offset_data = QUERY->add_mvar( QUERY, "int", "@%dsp_name%_data", FALSE );
