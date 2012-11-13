@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 char *chuck_faust_template[] = {
 #include "chuck_faust.template.h"
@@ -70,17 +71,21 @@ char outfilename[2048];
 void strip(char *to, char *from, int quotes, int replace_spaces)
 {
     int i=0, j=0;
+    // trim any leading garbage
     while (from[i] && (from[i]==' ' || from[i]=='\t'
                        || (from[i]=='"' && quotes)))
         i++;
+    // copy valid identifier chars
     while (from[i]) {
         if (replace_spaces && from[i]==' ')
             to[j++] = '_';
-        else
+        else if(isalpha(from[i]) || from[i] == '_' || from[i] == '\0' ||
+                (j>0 && isdigit(from[i])))
             to[j++] = from[i];
         i++;
     }
-    j--;
+    to[j--] = 0;
+    // trim trailing garbage
     while (j>0 && (to[j]==' ' || to[j]=='\t'
                    || (to[j]=='"' && quotes)
                    || (to[j]=='_' && replace_spaces) ))
