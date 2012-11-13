@@ -12,4 +12,8 @@ chuck_faust.template.h: chuck_faust.template.cpp
 $(CHUCK_HEADER_HEADERS): %_h.h: chuck/include/%.h
 	sed  -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\(.*\)/"\1",/' $< >$@
 
+clean:
+	rm -rf faust2ck *.o chuck_faust.template.h $(CHUCK_HEADER_HEADERS)
 
+install: faust2ck
+	cp -f faust2ck /usr/bin/
