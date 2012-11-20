@@ -4,6 +4,7 @@
 *.o
 
 src/faust2ck
+src/faust2ck.exe
 
 *.chug
 

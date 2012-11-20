@@ -13,6 +13,8 @@
 // Generic min and max using C++ inline
 //-------------------------------------------------------------------
 
+#ifndef WIN32
+
 inline int      max (unsigned int a, unsigned int b) { return (a>b) ? a : b; }
 inline int      max (int a, int b)          { return (a>b) ? a : b; }
 
@@ -55,6 +57,8 @@ inline double   min (double a, long b)      { return (a<b) ? a : b; }
 inline double   min (float a, double b)     { return (a<b) ? a : b; }
 inline double   min (double a, float b)     { return (a<b) ? a : b; }
 
+#endif // ndef WIN32
+
 inline int      lsr (int x, int n)          { return int(((unsigned int)x) >> n); }
 inline int      int2pow2 (int x)            { int r=0; while ((1<<r)<x) r++; return r; }
 
@@ -76,6 +80,12 @@ struct Meta : std::map<std::string, std::string>
 };
 
 /* UI class - do-nothing (from FAUST/minimal.cpp) */
+
+#ifdef WIN32
+#ifdef interface
+#undef interface
+#endif // interface
+#endif // WIN32
 
 class UI
 {
@@ -228,7 +238,7 @@ CK_DLL_QUERY(%dsp_name%_query)
     QUERY->add_ctor(QUERY, %dsp_name%_ctor);
     QUERY->add_dtor(QUERY, %dsp_name%_dtor);
     
-    g_nChans = std::max(temp.getNumInputs(), temp.getNumOutputs());
+    g_nChans = max(temp.getNumInputs(), temp.getNumOutputs());
     
     if(g_nChans == 1)
         QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
