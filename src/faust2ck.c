@@ -68,7 +68,7 @@ char dspname[256] = "mydsp";
 int in_widget = 0;
 char outfilename[2048];
 
-void strip(char *to, char *from, int quotes, int replace_spaces)
+void strip(char *to, const char *from, int quotes, int replace_spaces)
 {
     int i=0, j=0;
     // trim any leading garbage
@@ -122,7 +122,8 @@ void on_end_tag(char *name, char *value)
     }
 
     else if (strcmp(name, "name")==0) {
-        strip(dspname, value, 1, 1);
+        if(strlen(value))
+            strip(dspname, value, 1, 1);
     }
 }
 
@@ -231,13 +232,13 @@ void do_template(char *template[]);
 int on_replace(char *var)
 {
     if (strcmp(var, "dsp_name")==0) {
-        fprintf(out, dspname);
+        fprintf(out, "%s", dspname);
     }
     else if (strcmp(var, "var_name")==0) {
-        fprintf(out, current_v->name);
+        fprintf(out, "%s", current_v->name);
     }
     else if (strcmp(var, "var_label")==0) {
-        fprintf(out, current_v->label);
+        fprintf(out, "%s", current_v->label);
     }
     else if (strcmp(var, "ctrl_cget_functions")==0) {
         variable_t *v = variables.next;
@@ -399,6 +400,8 @@ int main(int argc, char *argv[])
         strncpy(basename, dspfilename, basenamelen);
         basename[basenamelen] = '\0';
     }
+    
+    strip(dspname, basename, 1, 1);
     
     snprintf(cmd, BUF_SIZE, "faust -xml '.faust2ck_tmp/%s' > /dev/null", dspfilename);
     //printf("%s\n", cmd);
