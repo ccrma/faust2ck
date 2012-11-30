@@ -464,7 +464,7 @@ int main(int argc, char *argv[])
     }
 
 #if defined(__APPLE__)
-    snprintf(cmd, BUF_SIZE, "clang++ -D__MACOSX_CORE__ -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "clang++ -D__MACOSX_CORE__ -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -fPIC -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
