@@ -66,6 +66,7 @@ typedef struct _variable_t
 
 variable_t variables;
 variable_t *current_v = &variables;
+int num_inputs = 0, num_outputs = 0;
 FILE *out = 0;
 char dspname[256] = "mydsp";
 int in_widget = 0;
@@ -107,8 +108,8 @@ void on_beg_tag(char *name)
         current_v = current_v->next;
         current_v->next = 0;
         current_v->initial_value = 1;
-        current_v->min_value = NAN;
-        current_v->max_value = NAN;
+        current_v->min_value = 1;
+        current_v->max_value = 1;
         in_widget = 1;
     }
 }
@@ -130,6 +131,13 @@ void on_end_tag(char *name, char *value)
     else if (strcmp(name, "name")==0) {
         if(strlen(value))
             strip(dspname, value, 1, 1);
+    }
+    
+    else if (strcmp(name, "inputs")==0) {
+        num_inputs = atoi(value);
+    }
+    else if (strcmp(name, "outputs")==0) {
+        num_outputs = atoi(value);
     }
     
     else if (strcmp(name, "init")==0) {
@@ -340,14 +348,22 @@ int do_example(FILE *exOut)
 {
     char firstLetter = dspname[0];
     
-    fprintf(exOut, "%s %c => dac;\n\n", dspname, firstLetter);
+    if(num_inputs > 0)   
+    {
+        fprintf(exOut, "SndBuf buf => %s %c => dac;\n", dspname, firstLetter);
+        fprintf(exOut, "\"special:dope\" => buf.read;\n\n");
+    }
+    else
+    {
+        fprintf(exOut, "%s %c => dac;\n\n", dspname, firstLetter);
+    }
     
     variable_t *v = variables.next;
     while(v)
     {
         current_v = v;
         
-        if(v->min_value != NAN && v->max_value != NAN)
+        if(v->min_value != v->max_value)
             fprintf(exOut, "// %s: initial: %1.1f, minimum: %1.1f, maximum: %1.1f\n", 
                 v->label, v->initial_value, v->min_value, v->max_value);
         else
