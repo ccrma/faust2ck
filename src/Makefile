@@ -1,4 +1,8 @@
 
+CC?=cc
+
+CFLAGS=-std=c99
+
 CHUCK_HEADERS=chuck_dl.h chuck_def.h chuck_oo.h util_thread.h
 CHUCK_HEADER_HEADERS=$(addsuffix _h.h,$(basename $(CHUCK_HEADERS)))
 
@@ -11,6 +15,9 @@ chuck_faust.template.h: chuck_faust.template.cpp
 
 $(CHUCK_HEADER_HEADERS): %_h.h: chuck/include/%.h
 	sed  -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\(.*\)/"\1",/' $< >$@
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -rf faust2ck *.o chuck_faust.template.h $(CHUCK_HEADER_HEADERS)
