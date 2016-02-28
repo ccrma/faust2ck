@@ -50,7 +50,7 @@ Usage: faust2ck <filename.dsp>
 
 You can see that it requires a single input, the name of a FAUST .dsp file.
 How you come up with this .dsp file is beyond the scope of this document, 
-but check out here: http://faust.grame.fr/index.php/online-examples for some 
+but check out here: http://faust.grame.fr/examples.html for some 
 cool examples.
 
 When you execute faust2ck with a suitable .dsp file:
