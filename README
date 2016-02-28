@@ -64,7 +64,7 @@ $ chuck -gfilename
 
 but chuck will exit immediately because you haven't provided it with a script
 to run. If you want to load your new ChuGin without the annoying -g option, 
-simply copy it to your ChuGin directory (typically /usr/lib/chuck). 
+simply copy it to your ChuGin directory (typically /usr/local/lib/chuck). 
 
 License
 =======
