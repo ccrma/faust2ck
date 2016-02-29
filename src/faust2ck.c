@@ -403,6 +403,8 @@ int main(int argc, char *argv[])
     FILE *exOut = NULL;
     int result = 0;
     int generateExample = 0;
+    int leaveBuildProducts = 0;
+    int f2ckDebug = 0;
     out = stdout;
 
     variables.next = NULL;
@@ -414,6 +416,11 @@ int main(int argc, char *argv[])
         if(strcmp("-x", argv[i]) == 0)
         {
             generateExample = 1;
+        }
+        else if(strcmp("-g", argv[i]) == 0)
+        {
+            leaveBuildProducts = 1;
+            f2ckDebug = 1;
         }
         else if(inputArgument == NULL)
         {
@@ -573,9 +580,13 @@ int main(int argc, char *argv[])
     
     /* compile the resulting FAUST output with platform specific compiler */
     
+    const char *debugOption = "";
+    if(f2ckDebug)
+        debugOption = "-g";
+    
 #if defined(__APPLE__)
-    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -fPIC -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
-             basename, dspfilename);
+    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -fPIC -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+             debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
     if(result != 0)
@@ -586,8 +597,8 @@ int main(int argc, char *argv[])
     }
     
 #elif defined(__linux__)
-    snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
-             basename, dspfilename);
+    snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+             debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
     if(result != 0)
@@ -642,7 +653,8 @@ error:
     
     /* clear tmp directory */
     
-    system("rm -rf .faust2ck_tmp");
+    if(!leaveBuildProducts)
+        system("rm -rf .faust2ck_tmp");
     
     if (fxml)
         fclose(fxml);
