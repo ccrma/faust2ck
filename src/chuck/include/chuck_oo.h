@@ -1,34 +1,35 @@
 /*----------------------------------------------------------------------------
-    ChucK Concurrent, On-the-fly Audio Programming Language
-      Compiler and Virtual Machine
+  ChucK Concurrent, On-the-fly Audio Programming Language
+    Compiler and Virtual Machine
 
-    Copyright (c) 2004 Ge Wang and Perry R. Cook.  All rights reserved.
-      http://chuck.cs.princeton.edu/
-      http://soundlab.cs.princeton.edu/
+  Copyright (c) 2004 Ge Wang and Perry R. Cook.  All rights reserved.
+    http://chuck.stanford.edu/
+    http://chuck.cs.princeton.edu/
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-    U.S.A.
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+  U.S.A.
 -----------------------------------------------------------------------------*/
 
 //-----------------------------------------------------------------------------
 // file: chuck_oo.h
-// desc: ...
+// desc: chuck baes objects
 //
-// author: Ge Wang (gewang@cs.princeton.edu)
-//         Perry R. Cook (prc@cs.princeton.edu)
-// date: Autumn 2005
+// author: Ge Wang (ge@ccrma.stanford.edu | gewang@cs.princeton.edu)
+//         Ananya Misra (amisra@cs.princeton.edu)
+//         Andrew Schran (aschran@princeton.edu) - fileIO implementation
+// date: Autumn 2004
 //-----------------------------------------------------------------------------
 #ifndef __CHUCK_OO_H__
 #define __CHUCK_OO_H__
@@ -75,12 +76,15 @@ public:
     virtual ~Chuck_VM_Object() { }
 
 public:
-    // add reference
-    void add_ref();
+    // add reference (ge: april 2013: made these virtual)
+    virtual void add_ref();
     // release reference
-    void release();
+    virtual void release();
     // lock
-    void lock();
+    virtual void lock();
+    
+    // NOTE: be careful when overriding these, should always
+    // explicitly call up to ChucK_VM_Object (ge: 2013)
 
 public:
     // unlock_all: dis/allow deletion of locked objects
@@ -172,9 +176,13 @@ public:
 #define CHUCK_ARRAY4_DATASIZE sz_INT
 #define CHUCK_ARRAY8_DATASIZE sz_FLOAT
 #define CHUCK_ARRAY16_DATASIZE sz_COMPLEX
+#define CHUCK_ARRAY24_DATASIZE sz_VEC3 // 1.3.5.3
+#define CHUCK_ARRAY32_DATASIZE sz_VEC4 // 1.3.5.3
 #define CHUCK_ARRAY4_DATAKIND kindof_INT
 #define CHUCK_ARRAY8_DATAKIND kindof_FLOAT
 #define CHUCK_ARRAY16_DATAKIND kindof_COMPLEX
+#define CHUCK_ARRAY24_DATAKIND kindof_VEC3 // 1.3.5.3
+#define CHUCK_ARRAY32_DATAKIND kindof_VEC4 // 1.3.5.3
 //-----------------------------------------------------------------------------
 // name: struct Chuck_Array
 // desc: native ChucK arrays ( virtual base class )
@@ -196,6 +204,8 @@ public:
     virtual t_CKINT find( const std::string & key ) = 0; // find
     virtual t_CKINT erase( const std::string & key ) = 0; // erase
     virtual void clear( ) = 0; // clear
+    
+    Chuck_Type *m_array_type;
 };
 
 
@@ -301,9 +311,9 @@ public:
     t_CKUINT addr( const std::string & key );
     t_CKINT get( t_CKINT i, t_CKCOMPLEX * val );
     t_CKINT get( const std::string & key, t_CKCOMPLEX * val );
-    t_CKINT set( t_CKINT i, t_CKCOMPLEX val );
-    t_CKINT set( const std::string & key, t_CKCOMPLEX val );
-    t_CKINT push_back( t_CKCOMPLEX val );
+    t_CKINT set( t_CKINT i, const t_CKCOMPLEX & val );
+    t_CKINT set( const std::string & key, const t_CKCOMPLEX & val );
+    t_CKINT push_back( const t_CKCOMPLEX & val );
     t_CKINT pop_back( );
     t_CKINT back( t_CKCOMPLEX * val ) const;
     void    zero( t_CKUINT start, t_CKUINT end );
@@ -323,6 +333,86 @@ public:
     std::map<std::string, t_CKCOMPLEX> m_map;
     // t_CKINT m_size;
     // t_CKINT m_capacity;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Array24
+// desc: native ChucK arrays (for vec3)
+//-----------------------------------------------------------------------------
+struct Chuck_Array24 : Chuck_Array
+{
+public:
+    Chuck_Array24( t_CKINT capacity = 8 );
+    virtual ~Chuck_Array24();
+    
+public:
+    t_CKUINT addr( t_CKINT i );
+    t_CKUINT addr( const std::string & key );
+    t_CKINT get( t_CKINT i, t_CKVEC3 * val );
+    t_CKINT get( const std::string & key, t_CKVEC3 * val );
+    t_CKINT set( t_CKINT i, const t_CKVEC3 & val );
+    t_CKINT set( const std::string & key, const t_CKVEC3 & val );
+    t_CKINT push_back( const t_CKVEC3 & val );
+    t_CKINT pop_back( );
+    t_CKINT back( t_CKVEC3 * val ) const;
+    void    zero( t_CKUINT start, t_CKUINT end );
+    
+    virtual void    clear( );
+    virtual t_CKINT size( ) { return m_vector.size(); }
+    virtual t_CKINT capacity( ) { return m_vector.capacity(); }
+    virtual t_CKINT set_size( t_CKINT size );
+    virtual t_CKINT set_capacity( t_CKINT capacity );
+    virtual t_CKINT find( const std::string & key );
+    virtual t_CKINT erase( const std::string & key );
+    virtual t_CKINT data_type_size( ) { return CHUCK_ARRAY24_DATASIZE; }
+    virtual t_CKINT data_type_kind( ) { return CHUCK_ARRAY24_DATAKIND; }
+    
+public:
+    std::vector<t_CKVEC3> m_vector;
+    std::map<std::string, t_CKVEC3> m_map;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Array32
+// desc: native ChucK arrays (for vec4)
+//-----------------------------------------------------------------------------
+struct Chuck_Array32 : Chuck_Array
+{
+public:
+    Chuck_Array32( t_CKINT capacity = 8 );
+    virtual ~Chuck_Array32();
+    
+public:
+    t_CKUINT addr( t_CKINT i );
+    t_CKUINT addr( const std::string & key );
+    t_CKINT get( t_CKINT i, t_CKVEC4 * val );
+    t_CKINT get( const std::string & key, t_CKVEC4 * val );
+    t_CKINT set( t_CKINT i, const t_CKVEC4 & val );
+    t_CKINT set( const std::string & key, const t_CKVEC4 & val );
+    t_CKINT push_back( const t_CKVEC4 & val );
+    t_CKINT pop_back( );
+    t_CKINT back( t_CKVEC4 * val ) const;
+    void    zero( t_CKUINT start, t_CKUINT end );
+    
+    virtual void    clear( );
+    virtual t_CKINT size( ) { return m_vector.size(); }
+    virtual t_CKINT capacity( ) { return m_vector.capacity(); }
+    virtual t_CKINT set_size( t_CKINT size );
+    virtual t_CKINT set_capacity( t_CKINT capacity );
+    virtual t_CKINT find( const std::string & key );
+    virtual t_CKINT erase( const std::string & key );
+    virtual t_CKINT data_type_size( ) { return CHUCK_ARRAY32_DATASIZE; }
+    virtual t_CKINT data_type_kind( ) { return CHUCK_ARRAY32_DATAKIND; }
+    
+public:
+    std::vector<t_CKVEC4> m_vector;
+    std::map<std::string, t_CKVEC4> m_map;
 };
 
 
@@ -376,7 +466,7 @@ public:
 // name: Chuck_IO
 // desc: base Chuck IO class
 //-----------------------------------------------------------------------------
-struct Chuck_IO : Chuck_Object
+struct Chuck_IO : Chuck_Event
 {
 public:
     Chuck_IO();
@@ -400,13 +490,14 @@ public:
     // writing
     virtual void write( const std::string & val ) = 0;
     virtual void write( t_CKINT val ) = 0;
+    virtual void write( t_CKINT val, t_CKINT flags ) = 0;
     virtual void write( t_CKFLOAT val ) = 0;
     
     // constants
 public:
-    static const t_CKINT READ_INT32;
-    static const t_CKINT READ_INT16;
-    static const t_CKINT READ_INT8;
+    static const t_CKINT INT32;
+    static const t_CKINT INT16;
+    static const t_CKINT INT8;
     
     // asynchronous I/O members
     static const t_CKINT MODE_SYNC;
@@ -471,6 +562,7 @@ public:
     // writing
     virtual void write( const std::string & val );
     virtual void write( t_CKINT val );
+    virtual void write( t_CKINT val, t_CKINT flags );
     virtual void write( t_CKFLOAT val );
     
     // writing -- async
@@ -536,6 +628,7 @@ public:
     // writing
     virtual void write( const std::string & val );
     virtual void write( t_CKINT val );
+    virtual void write( t_CKINT val, t_CKINT flags );
     virtual void write( t_CKFLOAT val );
 };
 
@@ -573,9 +666,9 @@ public:
     // writing
     virtual void write( const std::string & val );
     virtual void write( t_CKINT val );
+    virtual void write( t_CKINT val, t_CKINT flags );
     virtual void write( t_CKFLOAT val );
 };
-
 
 
 #endif

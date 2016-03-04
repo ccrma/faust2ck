@@ -1,33 +1,32 @@
 /*----------------------------------------------------------------------------
-    ChucK Concurrent, On-the-fly Audio Programming Language
-      Compiler and Virtual Machine
+  ChucK Concurrent, On-the-fly Audio Programming Language
+    Compiler and Virtual Machine
 
-    Copyright (c) 2004 Ge Wang and Perry R. Cook.  All rights reserved.
-      http://chuck.cs.princeton.edu/
-      http://soundlab.cs.princeton.edu/
+  Copyright (c) 2004 Ge Wang and Perry R. Cook.  All rights reserved.
+    http://chuck.stanford.edu/
+    http://chuck.cs.princeton.edu/
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-    U.S.A.
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+  U.S.A.
 -----------------------------------------------------------------------------*/
 
 //-----------------------------------------------------------------------------
 // file: chuck_absyn.h
-// desc: ...
+// desc: chuck abstract syntax
 //
-// author: Ge Wang (gewang@cs.princeton.edu)
-//         Perry R. Cook (prc@cs.princeton.edu)
+// author: Ge Wang (ge@ccrma.stanford.edu | gewang@cs.princeton.edu)
 // date: Autumn 2002
 //-----------------------------------------------------------------------------
 #ifndef __CHUCK_ABSYN_H__
@@ -115,6 +114,7 @@ typedef struct a_Class_Body_ * a_Class_Body;
 typedef struct a_Array_Sub_ * a_Array_Sub;
 typedef struct a_Complex_ * a_Complex;
 typedef struct a_Polar_ * a_Polar;
+typedef struct a_Vec_ * a_Vec; // ge: added 1.3.5.3
 
 // forward reference for type
 typedef struct Chuck_Type * t_CKTYPE;
@@ -168,9 +168,11 @@ a_Exp new_exp_from_int( long num, int pos );
 a_Exp new_exp_from_uint( unsigned long num, int pos );
 a_Exp new_exp_from_float( double num, int pos );
 a_Exp new_exp_from_str( c_str str, int pos );
+a_Exp new_exp_from_char( c_str chr, int pos );
 a_Exp new_exp_from_if( a_Exp cond, a_Exp lhs, a_Exp rhs, int pos );
 a_Exp new_exp_from_complex( a_Complex, int pos );
 a_Exp new_exp_from_polar( a_Polar, int pos );
+a_Exp new_exp_from_vec( a_Vec, int pos ); // ge: added 1.3.5.3
 a_Exp new_exp_decl( a_Type_Decl type_decl, a_Var_Decl_List var_decl_list, int is_static, int pos );
 a_Exp new_exp_from_hack( a_Exp exp, int pos );
 a_Exp new_exp_from_nil( int pos );
@@ -184,7 +186,9 @@ a_Arg_List prepend_arg_list( a_Type_Decl type_decl, a_Var_Decl var_decl, a_Arg_L
 a_Array_Sub new_array_sub( a_Exp exp, int pos );
 a_Array_Sub prepend_array_sub( a_Array_Sub array, a_Exp exp, int pos );
 a_Complex new_complex( a_Exp re, int pos );
-a_Polar new_polar( a_Exp mod, int pos );
+a_Polar new_polar( a_Exp mod, int pos ); // ge: added 1.3.5.3
+a_Vec new_vec( a_Exp e, int pos );
+
 a_Class_Def new_class_def( ae_Keyword class_decl, a_Id_List xid, a_Class_Ext ext, a_Class_Body body, int pos );
 a_Class_Body new_class_body( a_Section section, int pos );
 a_Class_Body prepend_class_body( a_Section section, a_Class_Body body, int pos );
@@ -229,11 +233,13 @@ struct a_Arg_List_ { a_Type_Decl type_decl; a_Var_Decl var_decl; t_CKTYPE type;
                      a_Arg_List next; int linepos; a_Exp self; };
 struct a_Complex_ { a_Exp re; a_Exp im; int linepos; a_Exp self; };
 struct a_Polar_ { a_Exp mod; a_Exp phase; int linepos; a_Exp self; };
+struct a_Vec_ { a_Exp args; int numdims; int linepos; a_Exp self; }; // ge: added 1.3.5.3
 
 // enum primary exp type
 typedef enum { ae_primary_var, ae_primary_num, ae_primary_float, 
                ae_primary_str, ae_primary_array, ae_primary_exp,
-               ae_primary_hack, ae_primary_complex, ae_primary_polar, ae_primary_nil
+               ae_primary_hack, ae_primary_complex, ae_primary_polar,
+               ae_primary_vec, ae_primary_char, ae_primary_nil
              } ae_Exp_Primary_Type;
 
 struct a_Exp_Primary_
@@ -247,10 +253,12 @@ struct a_Exp_Primary_
         t_CKINT num;
         t_CKFLOAT fnum;
         c_str str;
+        c_str chr;
         a_Array_Sub array;
         a_Exp exp;
         a_Complex complex;
         a_Polar polar;
+        a_Vec vec; // ge: added 1.3.5.3
     };
 
     int linepos;

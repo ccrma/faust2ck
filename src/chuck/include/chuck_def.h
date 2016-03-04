@@ -1,32 +1,32 @@
 /*----------------------------------------------------------------------------
-    ChucK Concurrent, On-the-fly Audio Programming Language
-      Compiler and Virtual Machine
+  ChucK Concurrent, On-the-fly Audio Programming Language
+    Compiler and Virtual Machine
 
-    Copyright (c) 2004 Ge Wang and Perry R. Cook.  All rights reserved.
-      http://chuck.cs.princeton.edu/
-      http://soundlab.cs.princeton.edu/
+  Copyright (c) 2004 Ge Wang and Perry R. Cook.  All rights reserved.
+    http://chuck.stanford.edu/
+    http://chuck.cs.princeton.edu/
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
-    U.S.A.
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
+  U.S.A.
 -----------------------------------------------------------------------------*/
 
 //-----------------------------------------------------------------------------
 // file: chuck_def.h
-// desc: ...
+// desc: ChucK defines for the system
 //
-// author: Ge Wang (gewang@cs.princeton.edu)
+// author: Ge Wang (ge@ccrma.stanford.edu | gewang@cs.princeton.edu)
 //         Perry R. Cook (prc@cs.princeton.edu)
 // date: Autumn 2002
 //-----------------------------------------------------------------------------
@@ -56,6 +56,11 @@ typedef struct { t_CKFLOAT re ; t_CKFLOAT im ; } t_CKCOMPLEX;
 // polar type
 typedef struct { t_CKFLOAT modulus ; t_CKFLOAT phase ; } t_CKPOLAR;
 
+// vector types
+typedef struct { t_CKFLOAT x ; t_CKFLOAT y ; t_CKFLOAT z ; } t_CKVEC3;
+typedef struct { t_CKFLOAT x ; t_CKFLOAT y ; t_CKFLOAT z ; t_CKFLOAT w ; } t_CKVEC4;
+typedef struct { t_CKUINT N ; t_CKFLOAT * values ; } t_CKVECTOR;
+
 // size
 #define sz_TIME                     sizeof(t_CKTIME)
 #define sz_DUR                      sizeof(t_CKDUR)
@@ -69,6 +74,9 @@ typedef struct { t_CKFLOAT modulus ; t_CKFLOAT phase ; } t_CKPOLAR;
 #define sz_VOIDPTR                  sizeof(t_CKVOIDPTR)
 #define sz_COMPLEX                  sizeof(t_CKCOMPLEX)
 #define sz_POLAR                    sizeof(t_CKPOLAR)
+#define sz_VEC3                     sizeof(t_CKVEC3)
+#define sz_VEC4                     sizeof(t_CKVEC4)
+#define sz_VECTOR                   sizeof(t_CKVECTOR)
 #define sz_VOID                     0
 #define sz_WORD                     4
 
@@ -78,6 +86,8 @@ typedef struct { t_CKFLOAT modulus ; t_CKFLOAT phase ; } t_CKPOLAR;
 #define kindof_INT                 1
 #define kindof_FLOAT               2
 #define kindof_COMPLEX             3
+#define kindof_VEC3                4
+#define kindof_VEC4                5
 
 typedef char *                      c_str;
 typedef const char *                c_constr;
@@ -122,6 +132,7 @@ typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;
 #define ck_max(x,y)                 ( (x) >= (y) ? (x) : (y) )
 #define ck_min(x,y)                 ( (x) <= (y) ? (x) : (y) )
 
+#ifndef __arm__
 // dedenormal
 #define CK_DDN_SINGLE(f)            f = ( f >= 0 ? \
         ( ( f > (t_CKSINGLE)1e-15 && f < (t_CKSINGLE)1e15 ) ? f : (t_CKSINGLE)0.0 ) : \
@@ -129,7 +140,10 @@ typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;
 #define CK_DDN_DOUBLE(f)            f = ( f >= 0 ? \
         ( ( f > (t_CKDOUBLE)1e-15 && f < (t_CKDOUBLE)1e15 ) ? f : 0.0 ) : \
         ( ( f < (t_CKDOUBLE)-1e-15 && f > (t_CKDOUBLE)-1e15 ) ? f : 0.0 ) )
-
+#else
+#define CK_DDN_SINGLE(f) (f)
+#define CK_DDN_DOUBLE(f) (f)
+#endif // __arm__
 
 // tracking
 #if defined(__CHUCK_STAT_TRACK__)
@@ -142,8 +156,9 @@ typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;
 #define __PLATFORM_MACOSX__
 #endif
 
-#if defined(__LINUX_ALSA__) || defined(__LINUX_JACK__) || defined(__LINUX_OSS__) 
-#define __PLATFORM_LINUX__
+#if defined(__LINUX_ALSA__) || defined(__LINUX_JACK__) || defined(__LINUX_OSS__) || defined(__LINUX_PULSE__) || defined(__UNIX_JACK__)
+// defined by default in Linux makefiles
+//#define __PLATFORM_LINUX__
 #endif
 
 #ifdef __PLATFORM_WIN32__
@@ -156,11 +171,12 @@ typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;
 #pragma warning (disable : 4311)  // type casts to void*
 #pragma warning (disable : 4244)  // truncation
 #pragma warning (disable : 4068)  // unknown pragma
+#pragma warning (disable : 4018)  // signed/unsigned mismatch
 #endif
 
 #ifdef __CHIP_MODE__
 #define __DISABLE_MIDI__
-#define __DISABLE_SNDBUF__
+//#define __DISABLE_SNDBUF__
 #define __DISABLE_WATCHDOG__
 #define __DISABLE_RAW__
 #define __DISABLE_KBHIT__
@@ -172,7 +188,9 @@ typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;
 #define __STK_USE_SINGLE_PRECISION__
 #endif
 
-
-
+#ifdef __arm__
+// enable additional optimization
+#define __STK_USE_SINGLE_PRECISION__
+#endif // __arm__
 
 #endif
