@@ -597,7 +597,7 @@ int main(int argc, char *argv[])
     }
     
 #elif defined(__linux__)
-    snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -D__PLATFORM_LINUX__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
