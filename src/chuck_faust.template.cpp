@@ -1,4 +1,4 @@
-
+#include "chuck_carrier.h"
 #include "chuck_def.h"
 #include "chuck_dl.h"
 
@@ -65,9 +65,9 @@ inline int      int2pow2 (int x)            { int r=0; while ((1<<r)<x) r++; ret
 
 /******************************************************************************
  *******************************************************************************
- 
+
  FAUST META DATA
- 
+
  *******************************************************************************
  *******************************************************************************/
 
@@ -91,7 +91,7 @@ class UI
 {
 public:
     virtual ~UI() { }
-    
+
     // active widgets
     virtual void addButton(const char* label, float* zone) = 0;
     virtual void addToggleButton(const char* label, float* zone) = 0;
@@ -99,20 +99,20 @@ public:
     virtual void addVerticalSlider(const char* label, float* zone, float init, float min, float max, float step) = 0;
     virtual void addHorizontalSlider(const char* label, float* zone, float init, float min, float max, float step) = 0;
     virtual void addNumEntry(const char* label, float* zone, float init, float min, float max, float step) = 0;
-    
+
     // passive widgets
     virtual void addNumDisplay(const char* label, float* zone, int precision) = 0;
     virtual void addTextDisplay(const char* label, float* zone, char* names[], float min, float max) = 0;
     virtual void addHorizontalBargraph(const char* label, float* zone, float min, float max) = 0;
     virtual void addVerticalBargraph(const char* label, float* zone, float min, float max) = 0;
-    
+
     // layout widgets
     virtual void openFrameBox(const char* label) = 0;
     virtual void openTabBox(const char* label) = 0;
     virtual void openHorizontalBox(const char* label) = 0;
     virtual void openVerticalBox(const char* label) = 0;
     virtual void closeBox() = 0;
-    
+
     virtual void declare(float* zone, const char* key, const char* value) {}
 };
 
@@ -125,7 +125,7 @@ public:
     virtual void buildUserInterface(UI* interface)                  = 0;
     virtual void init(int samplingRate)                             = 0;
     virtual void compute(int len, float** inputs, float** outputs)  = 0;
-    
+
     SAMPLE ** ck_frame_in;
     SAMPLE ** ck_frame_out;
 
@@ -184,9 +184,9 @@ CK_DLL_DTOR(%dsp_name%_dtor)
 
     delete[] d->ck_frame_in;
     delete[] d->ck_frame_out;
-    
+
     delete d;
-    
+
     OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data) = 0;
 }
 
@@ -194,12 +194,12 @@ CK_DLL_DTOR(%dsp_name%_dtor)
 CK_DLL_TICK(%dsp_name%_tick)
 {
     %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
-    
+
     d->ck_frame_in[0] = &in;
     d->ck_frame_out[0] = out;
 
     d->compute(1, d->ck_frame_in, d->ck_frame_out);
-    
+
     return TRUE;
 }
 
@@ -207,7 +207,7 @@ CK_DLL_TICK(%dsp_name%_tick)
 CK_DLL_TICKF(%dsp_name%_tickf)
 {
     %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
-    
+
     for(int f = 0; f < nframes; f++)
     {
         // fake-deinterleave
@@ -216,10 +216,10 @@ CK_DLL_TICKF(%dsp_name%_tickf)
             d->ck_frame_in[c] = &in[f*g_nChans+c];
             d->ck_frame_out[c] = &out[f*g_nChans+c];
         }
-        
+
         d->compute(1, d->ck_frame_in, d->ck_frame_out);
     }
-    
+
     return TRUE;
 }
 
@@ -232,14 +232,14 @@ CK_DLL_QUERY(%dsp_name%_query)
 	%dsp_name% temp; // needed to get IO channel count
 
     QUERY->setname(QUERY, "%dsp_name%");
-    
+
     QUERY->begin_class(QUERY, "%dsp_name%", "UGen");
-    
+
     QUERY->add_ctor(QUERY, %dsp_name%_ctor);
     QUERY->add_dtor(QUERY, %dsp_name%_dtor);
-    
+
     g_nChans = max(temp.getNumInputs(), temp.getNumOutputs());
-    
+
     if(g_nChans == 1)
         QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
     else
@@ -253,7 +253,7 @@ CK_DLL_QUERY(%dsp_name%_query)
 
     // end import
 	QUERY->end_class(QUERY);
-	
+
     return TRUE;
 
 error:
