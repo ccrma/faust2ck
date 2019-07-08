@@ -49,6 +49,10 @@ char *chuck_def_h[] = {
 #include "chuck_def_h.h"
     NULL
 };
+char *chuck_carrier_h[] = {
+#include "chuck_carrier_h.h"
+    NULL
+};
 char *util_thread_h[] = {
 #include "util_thread_h.h"
     NULL
@@ -132,14 +136,14 @@ void on_end_tag(char *name, char *value)
         if(strlen(value))
             strip(dspname, value, 1, 1);
     }
-    
+
     else if (strcmp(name, "inputs")==0) {
         num_inputs = atoi(value);
     }
     else if (strcmp(name, "outputs")==0) {
         num_outputs = atoi(value);
     }
-    
+
     else if (strcmp(name, "init")==0) {
         if(in_widget)
             current_v->initial_value = atof(value);
@@ -160,7 +164,7 @@ void on_end_tag(char *name, char *value)
 
 int parseXml(FILE* f)
 {
-    typedef enum 
+    typedef enum
     {
         in_open_tag,
         in_close_tag,
@@ -233,7 +237,7 @@ int parseXml(FILE* f)
                 on_end_tag(stack[level+3].buf, stack[level+2].buf);
                 continue;
             }
-            stack[level].buf[stack[level].pos++] = c; 
+            stack[level].buf[stack[level].pos++] = c;
             stack[level].buf[stack[level].pos] = 0;
             break;
         case in_text:
@@ -323,32 +327,32 @@ int write_header(char *filename, char *lines[])
     FILE * file = NULL;
     int r = 0;
     int i = 0;
-    
+
     file = fopen(filename, "w");
     if(file == NULL)
         goto error;
-    
+
     for(i = 0; lines[i] != NULL; i++)
     {
         if(fprintf(file, "%s\n", lines[i]) < 0)
             goto error;
     }
-    
+
     r = 1;
-    
+
 error:
-    
+
     if(file)
         fclose(file);
-    
+
     return r;
 }
 
 int do_example(FILE *exOut)
 {
     char firstLetter = dspname[0];
-    
-    if(num_inputs > 0)   
+
+    if(num_inputs > 0)
     {
         fprintf(exOut, "SndBuf buf => %s %c => dac;\n", dspname, firstLetter);
         fprintf(exOut, "\"special:dope\" => buf.read;\n\n");
@@ -357,27 +361,27 @@ int do_example(FILE *exOut)
     {
         fprintf(exOut, "%s %c => dac;\n\n", dspname, firstLetter);
     }
-    
+
     variable_t *v = variables.next;
     while(v)
     {
         current_v = v;
-        
+
         if(v->min_value != v->max_value)
-            fprintf(exOut, "// %s: initial: %1.1f, minimum: %1.1f, maximum: %1.1f\n", 
+            fprintf(exOut, "// %s: initial: %1.1f, minimum: %1.1f, maximum: %1.1f\n",
                 v->label, v->initial_value, v->min_value, v->max_value);
         else
             fprintf(exOut, "// %s\n", v->label);
-        
+
         fprintf(exOut, "%1.1f => %c.%s;\n\n", v->initial_value, firstLetter, v->label);
-        
+
         v = v->next;
     }
-    
+
     fprintf(exOut, "5::second => now;\n");
-    
+
     return 0;
-    
+
 error:
     return -1;
 }
@@ -408,8 +412,8 @@ int main(int argc, char *argv[])
     out = stdout;
 
     variables.next = NULL;
-    
-    
+
+
     /* loop through input arguments */
     for(int i = 1; i < argc; i++)
     {
@@ -448,7 +452,7 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+
     /* copy file to tmp directory */
     snprintf(cmd, BUF_SIZE, "cp '%s' .faust2ck_tmp/", inputArgument);
     //printf("%s\n", cmd);
@@ -459,7 +463,7 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+
     /* write out headers to tmp directory */
     if(!write_header(".faust2ck_tmp/chuck_dl.h", chuck_dl_h))
     {
@@ -467,29 +471,36 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+
     if(!write_header(".faust2ck_tmp/chuck_def.h", chuck_def_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
-    
+
+    if(!write_header(".faust2ck_tmp/chuck_carrier.h", chuck_carrier_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+
     if(!write_header(".faust2ck_tmp/chuck_oo.h", chuck_oo_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
-    
+
     if(!write_header(".faust2ck_tmp/util_thread.h", util_thread_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
-    
-    
+
+
     /* generate path-less filename and basename */
     dspfilename = strrchr(inputArgument, '/');
     if(dspfilename == NULL) // '/' not found
@@ -504,9 +515,9 @@ int main(int argc, char *argv[])
         strncpy(basename, dspfilename, basenamelen);
         basename[basenamelen] = '\0';
     }
-    
+
     strip(dspname, basename, 1, 1);
-    
+
     /* generate FAUST XML output */
     snprintf(cmd, BUF_SIZE, "faust -xml '.faust2ck_tmp/%s' > /dev/null", dspfilename);
     //printf("%s\n", cmd);
@@ -517,9 +528,9 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+
     snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
-    
+
     /* parse the XML */
     fxml = fopen(xmlfilepath, "r");
 
@@ -528,29 +539,29 @@ int main(int argc, char *argv[])
         rc = 2;
         goto error;
     }
-    
+
     if (parseXml(fxml)) {
         printf("Error parsing XML in %s\n", inputArgument);
         rc = 3;
         goto error;
     }
-    
+
     fclose(fxml);
     fxml = 0;
-    
-    
+
+
     /* determine output file name */
-    
+
     strcpy(outfilename, xmlfilepath);
     i=strlen(outfilename)-1;
     while (i>0 && outfilename[i]!='.')
         i--;
     if (i==0) i=strlen(outfilename);
     strcpy(&outfilename[i], "-wrapper.cpp");
-    
-    
+
+
     /* generate customized FAUST architecture file from template */
-    
+
     out = fopen(outfilename, "w");
     if (!out) {
         printf("Could not open output file %s\n", outfilename);
@@ -559,13 +570,13 @@ int main(int argc, char *argv[])
     }
 
     do_template(chuck_faust_template);
-    
+
     fclose(out);
     out = NULL;
-    
-    
+
+
     /* compile FAUST input with customized arch file */
-    
+
     snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
              outfilename, dspfilename, dspfilename);
     //printf("%s\n", cmd);
@@ -576,14 +587,14 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
-    
+
+
     /* compile the resulting FAUST output with platform specific compiler */
-    
+
     const char *debugOption = "";
     if(f2ckDebug)
         debugOption = "-g";
-    
+
 #if defined(__APPLE__)
     snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -mmacosx-version-min=10.5 -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -fPIC -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
@@ -595,7 +606,7 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+
 #elif defined(__linux__)
     snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -D__PLATFORM_LINUX__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
@@ -609,7 +620,7 @@ int main(int argc, char *argv[])
     }
 
 #elif defined(Win32) || defined(__CYGWIN__)
-    
+
     snprintf(cmd, BUF_SIZE, "cd .faust2ck_tmp && cl.exe /nologo /MT /W3 /EHsc /O2 /I \".\" \
     /D \"WIN32\" /D \"NDEBUG\" /D \"_WINDOWS\" /D \"_MBCS\" /D \"_USRDLL\" /D \"__PLATFORM_WIN32__\" /D \"__WINDOWS_DS__\" /FD \
     \"%s.cpp\" /link kernel32.lib user32.lib /nologo /dll /machine:I386 /out:\"%s.chug\" && cp \"%s.chug\" ../",
@@ -622,19 +633,19 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+
 #else
 
 #error no target platform (e.g. Mac OS, Linux, or Win32)
 
 #endif
-    
+
     /* generate example */
-    
+
     if(generateExample)
     {
         snprintf(exampleFilename, BUF_SIZE, "%s-test.ck", dspname);
-        
+
         exOut = fopen(exampleFilename, "w");
         if(!exOut)
         {
@@ -642,26 +653,26 @@ int main(int argc, char *argv[])
             rc = 6;
             goto error;
         }
-        
+
         do_example(exOut);
-        
+
         fclose(exOut);
         exOut = NULL;
     }
-    
+
 error:
-    
+
     /* clear tmp directory */
-    
+
     if(!leaveBuildProducts)
         system("rm -rf .faust2ck_tmp");
-    
+
     if (fxml)
         fclose(fxml);
 
     if (out && out!=stdout)
         fclose(out);
-    
+
     if(exOut)
         fclose(exOut);
 
