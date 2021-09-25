@@ -53,6 +53,10 @@ char *util_thread_h[] = {
 #include "util_thread_h.h"
     NULL
 };
+char *chuck_carrier_h[] = {
+#include "chuck_carrier_h.h"
+    NULL
+};
 
 
 typedef struct _variable_t
@@ -489,6 +493,13 @@ int main(int argc, char *argv[])
         goto error;
     }
     
+    if(!write_header(".faust2ck_tmp/chuck_carrier.h", chuck_carrier_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+    
     
     /* generate path-less filename and basename */
     dspfilename = strrchr(inputArgument, '/');
@@ -519,7 +530,19 @@ int main(int argc, char *argv[])
     }
     
     snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
-    
+   
+       
+    /* remove "meta" lines from FAUST XML output because of parse limitations*/
+    snprintf(cmd, BUF_SIZE, "sed -i '/\\<meta/d' %s", xmlfilepath);
+    printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable remove \"meta\" from XML file\n");
+        rc = 5;
+        goto error;
+    }
+ 
     /* parse the XML */
     fxml = fopen(xmlfilepath, "r");
 
