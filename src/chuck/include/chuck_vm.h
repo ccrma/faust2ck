@@ -34,6 +34,8 @@
 
 #include "chuck_oo.h"
 #include "chuck_ugen.h"
+#include "chuck_type.h"
+#include "chuck_carrier.h"
 
 // tracking
 #ifdef __CHUCK_STAT_TRACK__
@@ -46,14 +48,13 @@
 #include <list>
 
 
-
 #define CK_DEBUG_MEMORY_MGMT (0)
-
 #if CK_DEBUG_MEMORY_MGMT
 #define CK_MEMMGMT_TRACK(x) do{ x; } while(0)
 #else
 #define CK_MEMMGMT_TRACK(x)
 #endif
+
 
 
 
@@ -70,10 +71,12 @@ struct Chuck_VM;
 struct Chuck_VM_Func;
 struct Chuck_VM_FTable;
 struct Chuck_Msg;
+#ifndef __DISABLE_SERIAL__
+// hack: spencer?
+struct Chuck_IO_Serial;
+#endif
 
-class BBQ;
 class CBufferSimple;
-class Digitalio;
 
 
 
@@ -136,6 +139,8 @@ public:
     t_CKUINT stack_depth;
     // whether the function needs 'this' pointer or not
     t_CKBOOL need_this;
+    // whether the function is a static function inside class
+    t_CKBOOL is_static; // 1.4.1.0
     // native
     t_CKUINT native_func;
     // is ctor?
@@ -149,7 +154,6 @@ public:
 };
 
 
-struct Chuck_IO_Serial;
 
 
 //-----------------------------------------------------------------------------
@@ -176,10 +180,13 @@ public:
     // add parent object reference (added 1.3.1.2)
     t_CKVOID add_parent_ref( Chuck_Object * obj );
     
+    #ifndef __DISABLE_SERIAL__
     // HACK - spencer (added 1.3.2.0)
     // add/remove SerialIO devices to close on shred exit
+    // REFACTOR-2017: TODO -- remove
     t_CKVOID add_serialio( Chuck_IO_Serial * serial );
     t_CKVOID remove_serialio( Chuck_IO_Serial * serial );
+    #endif
     
 //-----------------------------------------------------------------------------
 // data
@@ -246,8 +253,10 @@ public: // ge: 1.3.5.3
     // loop counter pointer stack
     std::vector<t_CKUINT *> m_loopCounters;
     
+#ifndef __DISABLE_SERIAL__
 private:
     std::list<Chuck_IO_Serial *> * m_serials;
+#endif
 };
 
 
@@ -327,7 +336,7 @@ public: // shreduling
     t_CKBOOL shredule( Chuck_VM_Shred * shred, t_CKTIME wake_time );
     Chuck_VM_Shred * get( );
     void advance( t_CKINT N );
-    void advance_v( t_CKINT & num_left );
+    void advance_v( t_CKINT & num_left, t_CKINT & offset );
     void set_adaptive( t_CKUINT max_block_size );
 
 public: // high-level shred interface
@@ -378,6 +387,12 @@ public:
 
 
 
+// forward reference
+struct Chuck_Globals_Manager; // added 1.4.1.0 (jack)
+
+
+
+
 //-----------------------------------------------------------------------------
 // name: struct Chuck_VM
 // desc: ...
@@ -395,6 +410,7 @@ public: // init
     t_CKBOOL initialize( t_CKUINT srate, t_CKUINT dac_chan, t_CKUINT adc_chan,
                          t_CKUINT adaptive, t_CKBOOL halt );
     t_CKBOOL initialize_synthesis( );
+    t_CKBOOL setCarrier( Chuck_Carrier * c ) { m_carrier = c; return TRUE; }
     t_CKBOOL shutdown();
     t_CKBOOL has_init() { return m_init; }
 
@@ -409,10 +425,16 @@ public: // run state; 1.3.5.3
     t_CKBOOL & runningState() { return m_is_running; }
 
 public: // shreds
-    Chuck_VM_Shred * spork( Chuck_VM_Code * code, Chuck_VM_Shred * parent );
-    Chuck_VM_Shred * fork( Chuck_VM_Code * code );
+    // spork code as shred; if not immediate, enqueue for next sample
+    // REFACTOR-2017: added immediate flag
+    Chuck_VM_Shred * spork( Chuck_VM_Code * code, Chuck_VM_Shred * parent,
+                            t_CKBOOL immediate = FALSE );
+    // get reference to shreduler
     Chuck_VM_Shreduler * shreduler() const;
+    // the next spork ID
     t_CKUINT next_id( );
+    // the last used spork ID
+    t_CKUINT last_id( );
 
 public: // audio
     t_CKUINT srate() const;
@@ -446,10 +468,23 @@ public: // msg
 public: // get error
     const char * last_error() const
     { return m_last_error.c_str(); }
-    
+
+public:
+    // REFACTOR-2017: get associated, per-VM environment, chout, cherr
+    Chuck_Carrier * carrier() const { return m_carrier; }
+    Chuck_Env * env() const { return m_carrier->env; }
+    Chuck_IO_Chout * chout() const { return m_carrier->chout; }
+    Chuck_IO_Cherr * cherr() const { return m_carrier->cherr; }
+    // 1.4.1.0 (jack): get associated globals manager
+    Chuck_Globals_Manager * globals_manager() const { return m_globals_manager; }
+
 //-----------------------------------------------------------------------------
 // data
 //-----------------------------------------------------------------------------
+protected:
+    // REFACTOR-2017: added per-ChucK carrier
+    Chuck_Carrier * m_carrier;
+
 public:
     // ugen
     Chuck_UGen * m_adc;
@@ -464,14 +499,21 @@ public:
     // for shreduler, ge: 1.3.5.3
     const SAMPLE * input_ref() { return m_input_ref; }
     SAMPLE * output_ref() { return m_output_ref; }
+    // for shreduler, jack: planar (non-interleaved) audio buffers
+    t_CKUINT most_recent_buffer_length() { return m_current_buffer_frames; }
 
 protected:
     // for shreduler, ge: 1.3.5.3
     const SAMPLE * m_input_ref;
     SAMPLE * m_output_ref;
+    t_CKUINT m_current_buffer_frames;
+
+public:
+    // protected, but needs to be accessible from Globals Manager (1.4.1.0)
+    // generally, this should not be called except by internals such as GM
+    Chuck_VM_Shred * spork( Chuck_VM_Shred * shred );
 
 protected:
-    Chuck_VM_Shred * spork( Chuck_VM_Shred * shred );
     t_CKBOOL free( Chuck_VM_Shred * shred, t_CKBOOL cascade, 
                    t_CKBOOL dec = TRUE );
     void dump( Chuck_VM_Shred * shred );
@@ -498,10 +540,9 @@ protected:
     // TODO: vector? (added 1.3.0.0 to fix uber-crash)
     std::list<CBufferSimple *> m_event_buffers;
 
-public:
-    // priority
-    static t_CKBOOL set_priority( t_CKINT priority, Chuck_VM * vm );
-    static t_CKINT our_priority;
+protected:
+    // 1.4.1.0 (jack): manager for global variables
+    Chuck_Globals_Manager * m_globals_manager;
 };
 
 
@@ -526,6 +567,7 @@ enum Chuck_Msg_Type
     MSG_ABORT,
     MSG_ERROR, // added 1.3.0.0
     MSG_CLEARVM,
+    MSG_CLEARGLOBALS,
 };
 
 
