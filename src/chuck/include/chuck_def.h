@@ -39,12 +39,34 @@
 
 
 // types
+#ifndef __EMSCRIPTEN__
 #define t_CKTIME                    double
 #define t_CKDUR                     double
 #define t_CKFLOAT                   double
 #define t_CKDOUBLE                  double
 #define t_CKSINGLE                  float
+#ifdef _WIN64                       // REFACTOR-2017
+#define t_CKINT                     long long // REFACTOR-2017
+#define CK_INT_MAX                  LLONG_MAX
+#else
 #define t_CKINT                     long
+#define CK_INT_MAX                  LONG_MAX
+#endif
+#define CK_FLT_MAX                  DBL_MAX
+#define CK_FLT_MIN                  DBL_MIN
+
+#else
+#define t_CKTIME                    double
+#define t_CKDUR                     double
+#define t_CKFLOAT                   double
+#define t_CKDOUBLE                  double
+#define t_CKSINGLE                  float
+#define t_CKINT                     int // REFACTOR-2017
+#define CK_FLT_MAX                  DBL_MAX
+#define CK_FLT_MIN                  DBL_MIN
+#define CK_INT_MAX                  INT_MAX
+#endif
+
 #define t_CKUINT                    unsigned t_CKINT
 #define t_CKBOOL                    unsigned t_CKINT
 #define t_CKBYTE                    unsigned char
@@ -105,6 +127,9 @@ typedef const char *                c_constr;
 #define SILENCE                     0.0f
 #define CK_DDN                      CK_DDN_SINGLE
 #endif
+
+// for external use
+#define t_CKSAMPLE                  SAMPLE
 
 // sample complex
 typedef struct { SAMPLE re ; SAMPLE im ; } t_CKCOMPLEX_SAMPLE;

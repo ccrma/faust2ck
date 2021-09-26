@@ -47,13 +47,28 @@
 //-----------------------------------------------------------------------------
 typedef enum {
     // general types
-    te_int, te_uint, te_single, te_float, te_double, te_time, te_dur,
+    te_none = 0, te_int, te_uint, te_single, te_float, te_double, te_time, te_dur,
     te_complex, te_polar, te_string, te_thread, te_shred, te_class,
     te_function, te_object, te_user, te_array, te_null, te_ugen, te_uana, 
     te_event, te_void, te_stdout, te_stderr, te_adc, te_dac, te_bunghole, 
     te_uanablob, te_io, te_fileio, te_chout, te_cherr, te_multi,
     te_vec3, te_vec4, te_vector // ge: added 1.3.5.3
 } te_Type;
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: enum te_GlobalType
+// desc: ChucK types for global vars: int, float, (subclass of) Event
+//       (REFACTOR-2017)
+//-----------------------------------------------------------------------------
+typedef enum {
+    te_globalInt, te_globalFloat, te_globalString, te_globalEvent,
+    te_globalUGen, te_globalObject,
+    // symbol: not used for declarations, only for later lookups :/
+    te_globalArraySymbol
+} te_GlobalType;
 
 
 
@@ -229,6 +244,8 @@ protected:
 };
 
 
+
+
 // forward reference
 struct Chuck_Type;
 struct Chuck_Value;
@@ -236,8 +253,9 @@ struct Chuck_Func;
 struct Chuck_Multi;
 struct Chuck_VM;
 struct Chuck_VM_Code;
-
 struct Chuck_DLL;
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -332,7 +350,7 @@ struct Chuck_Context : public Chuck_VM_Object
     t_CKBOOL has_error;
 
     // progress
-    enum { P_NONE = 0, P_CLASSES_ONLY, P_ALL };
+    enum { P_NONE = 0, P_CLASSES_ONLY, P_ALL_DONE };
     // progress in scan / type check / emit
     t_CKUINT progress;
 
@@ -361,7 +379,7 @@ struct Chuck_Context : public Chuck_VM_Object
     Chuck_VM_Code * code() { return nspc->pre_ctor; }
 
     // special alloc
-    Chuck_Type * new_Chuck_Type();
+    Chuck_Type * new_Chuck_Type( Chuck_Env * env );
     Chuck_Value * new_Chuck_Value( Chuck_Type * t, const std::string & name );
     Chuck_Func * new_Chuck_Func();
     Chuck_Namespace * new_Chuck_Namespace();
@@ -377,29 +395,16 @@ struct Chuck_Context : public Chuck_VM_Object
 struct Chuck_Env : public Chuck_VM_Object
 {
 public:
-    static t_CKBOOL startup();
-    static Chuck_Env * instance();
-    static t_CKBOOL shutdown();
-
-private:
-    static Chuck_Env * our_instance;
     // constructor
-    Chuck_Env( )
-    { 
-        // lock from being deleted
-        global_context.lock();
-        // make reference
-        context = &global_context; SAFE_ADD_REF(context);
-        // make name
-        context->filename = "@[global]";
-        // remember
-        global_nspc = global_context.nspc; SAFE_ADD_REF(global_nspc);
-        // deprecated stuff
-        deprecated.clear(); deprecate_level = 1;
-        user_nspc = NULL;
-        // clear
-        this->reset();
-    }
+    Chuck_Env();
+
+// REFACTOR-2017: carrier and accessors
+public:
+    void set_carrier( Chuck_Carrier * carrier ) { m_carrier = carrier; }
+    Chuck_VM * vm() { return m_carrier->vm; }
+
+protected:
+    Chuck_Carrier * m_carrier;
 
 protected:
     // global namespace
@@ -453,7 +458,7 @@ public:
     t_CKINT deprecate_level;
 
     // destructor
-    virtual ~Chuck_Env() { }
+    virtual ~Chuck_Env();
 
     // reset
     void reset( )
@@ -501,6 +506,42 @@ public:
     { assert( nspc_stack.size() > 0 ); return nspc_stack.back(); }
     Chuck_Type * class_top( )
     { assert( class_stack.size() > 0 ); return class_stack.back(); }
+    
+    // check whether the context is the global context
+    t_CKBOOL is_global()
+    { return class_def == NULL && func == NULL && class_scope == 0; }
+    
+public:
+    // REFACTOR-2017: public types
+    Chuck_Type * t_void;
+    Chuck_Type * t_int;
+    Chuck_Type * t_float;
+    Chuck_Type * t_time;
+    Chuck_Type * t_dur;
+    Chuck_Type * t_complex;
+    Chuck_Type * t_polar;
+    Chuck_Type * t_vec3;
+    Chuck_Type * t_vec4;
+    Chuck_Type * t_null;
+    Chuck_Type * t_function;
+    Chuck_Type * t_object;
+    Chuck_Type * t_array;
+    Chuck_Type * t_string;
+    Chuck_Type * t_event;
+    Chuck_Type * t_ugen;
+    Chuck_Type * t_uana;
+    Chuck_Type * t_uanablob;
+    Chuck_Type * t_shred;
+    Chuck_Type * t_io;
+    #ifndef __DISABLE_FILEIO__
+    Chuck_Type * t_fileio;
+    #endif
+    Chuck_Type * t_chout;
+    Chuck_Type * t_cherr;
+    Chuck_Type * t_thread;
+    Chuck_Type * t_class;
+    Chuck_Type * t_dac;
+    Chuck_Type * t_adc;
 };
 
 
@@ -585,85 +626,56 @@ struct Chuck_Type : public Chuck_VM_Object
     // example files
     std::vector<std::string> examples;
 
+    // reference to environment RE-FACTOR 2017
+    Chuck_Env * m_env;
+
 public:
     // constructor
-    Chuck_Type( te_Type _id = te_null, const std::string & _n = "", 
-                Chuck_Type * _p = NULL, t_CKUINT _s = 0 )
-    {
-        xid = _id; name = _n; parent = _p; size = _s; owner = NULL; 
-        array_type = NULL; array_depth = 0; obj_size = 0;
-        info = NULL; func = NULL; def = NULL; is_copy = FALSE; 
-        ugen_info = NULL; is_complete = TRUE; has_constructor = FALSE;
-        has_destructor = FALSE;
-        allocator = NULL;
-    }
-
+    Chuck_Type( Chuck_Env * env,
+                te_Type _id = te_null,
+                const std::string & _n = "",
+                Chuck_Type * _p = NULL,
+                t_CKUINT _s = 0 );
     // destructor
-    virtual ~Chuck_Type() { reset(); }
-    
-    // reset
-    void reset()
-    {
-        // fprintf( stderr, "type: %s %i\n", c_name(), (t_CKUINT)this );
-        xid = te_void; 
-        size = array_depth = obj_size = 0;
-        is_copy = FALSE;
-
-        // free only if not locked: to prevent garbage collection after exit
-        if( !this->m_locked )
-        {
-            // TODO: uncomment this, fix it to behave correctly
-            // release references
-            // SAFE_RELEASE(parent);
-            // SAFE_RELEASE(array_type);
-            SAFE_RELEASE(info);
-            // SAFE_RELEASE(owner);
-            // SAFE_RELEASE(func);
-            // SAFE_RELEASE(ugen_info);
-        }
-    }   
-    
+    virtual ~Chuck_Type();
+        // reset
+    void reset();
     // assignment - this does not touch the Chuck_VM_Object
-    const Chuck_Type & operator =( const Chuck_Type & rhs )
-    {
-        // release first
-        this->reset();
+    const Chuck_Type & operator =( const Chuck_Type & rhs );
+    // make a copy of this type struct
+    Chuck_Type * copy( Chuck_Env * env ) const;
 
-        // copy
-        this->xid = rhs.xid;
-        this->name = rhs.name;
-        this->parent = rhs.parent;
-        this->obj_size = rhs.obj_size;
-        this->size = rhs.size;
-        this->def = rhs.def;
-        this->is_copy = TRUE;
-        this->array_depth = rhs.array_depth;
-        this->array_type = rhs.array_type;
-        // SAFE_ADD_REF(this->array_type);
-        this->func = rhs.func;
-        // SAFE_ADD_REF(this->func);
-        this->info = rhs.info;
-        SAFE_ADD_REF(this->info);
-        this->owner = rhs.owner;
-        // SAFE_ADD_REF(this->owner);
-
-        return *this;
-    }
-
-    // copy
-    Chuck_Type * copy( Chuck_Env * env ) const
-    { Chuck_Type * n = env->context->new_Chuck_Type();
-      *n = *this; return n; }
-    
+public:
     // to string
+    const std::string & str();
+    // to c string
+    const char * c_name();
+    
+protected:
+    // this for str() and c_name() use only
     std::string ret;
-    const std::string & str()
-    { ret = name;
-      for( t_CKUINT i = 0; i < array_depth; i++ ) ret += std::string("[]");
-      return ret; }
-    // to c
-    const char * c_name()
-    { return str().c_str(); }
+
+public: // apropos | 1.4.1.0 (ge)
+    // generate info; output to console
+    void apropos();
+    // generate info; output to string
+    void apropos( std::string & output );
+
+public: // dump | 1.4.1.1 (ge)
+    // generate object state; output to console
+    void dump( Chuck_Object * obj );
+    // generate object state; output to string
+    void dump( Chuck_Object * obj, std::string & output );
+
+protected: // apropos-related helper function
+    // dump top level info
+    void apropos_top( std::string & output, const std::string & prefix );
+    // dump info about functions
+    void apropos_funcs( std::string & output, const std::string & prefix, t_CKBOOL inherited );
+    // dump info about vars
+    void apropos_vars( std::string & output, const std::string & prefix, t_CKBOOL inherited );
+    // dump info about examples
+    void apropos_examples( std::string & output, const std::string & prefix );
 };
 
 
@@ -688,11 +700,13 @@ struct Chuck_Value : public Chuck_VM_Object
     // member?
     t_CKBOOL is_member;
     // static?
-    t_CKBOOL is_static;  // do something
+    t_CKBOOL is_static; // do something
     // is context-global?
     t_CKBOOL is_context_global;
     // is decl checked
     t_CKBOOL is_decl_checked;
+    // is global (added REFACTOR-2017)
+    t_CKBOOL is_global;
     // 0 = public, 1 = protected, 2 = private
     t_CKUINT access;
     // owner
@@ -719,6 +733,7 @@ struct Chuck_Value : public Chuck_VM_Object
       addr = a; is_member = FALSE;
       is_static = FALSE; is_context_global = FALSE;
       is_decl_checked = TRUE; // only set to false in certain cases
+      is_global = FALSE;
       func_ref = NULL; func_num_overloads = 0; }
 
     // destructor
@@ -741,8 +756,10 @@ struct Chuck_Value : public Chuck_VM_Object
 //-----------------------------------------------------------------------------
 struct Chuck_Func : public Chuck_VM_Object
 {
-    // name
+    // name (actual in VM name, e.g., "dump@0@Object")
     std::string name;
+    // base name (without the designation, e.g., "dump"); 1.4.1.0
+    std::string base_name;
     // func def from parser
     a_Func_Def def;
     // code (included imported)
@@ -751,6 +768,8 @@ struct Chuck_Func : public Chuck_VM_Object
     // Chuck_DL_Func * dl_code;
     // member
     t_CKBOOL is_member;
+    // static (inside class)
+    t_CKBOOL is_static;
     // virtual table index
     t_CKUINT vt_index;
     // rember value
@@ -764,8 +783,9 @@ struct Chuck_Func : public Chuck_VM_Object
     std::string doc;
 
     // constructor
-    Chuck_Func() { def = NULL; code = NULL; is_member = FALSE; vt_index = 0xffffffff; 
-                   value_ref = NULL; /*dl_code = NULL;*/ next = NULL; up = NULL; }
+    Chuck_Func() { def = NULL; code = NULL; is_member = FALSE; is_static = FALSE,
+        vt_index = 0xffffffff; value_ref = NULL; /*dl_code = NULL;*/ next = NULL;
+        up = NULL; }
 
     // destructor
     virtual ~Chuck_Func()
@@ -779,7 +799,7 @@ struct Chuck_Func : public Chuck_VM_Object
 // primary chuck type checker interface
 //-----------------------------------------------------------------------------
 // initialize the type engine
-Chuck_Env * type_engine_init( Chuck_VM * vm );
+Chuck_Env * type_engine_init( Chuck_Carrier * carrier );
 // shutdown the type engine
 void type_engine_shutdown( Chuck_Env * env );
 // load a context to be type-checked or emitted
@@ -813,11 +833,11 @@ t_CKBOOL operator !=( const Chuck_Type & lhs, const Chuck_Type & rhs );
 t_CKBOOL equals( Chuck_Type * lhs, Chuck_Type * rhs );
 t_CKBOOL operator <=( const Chuck_Type & lhs, const Chuck_Type & rhs );
 t_CKBOOL isa( Chuck_Type * lhs, Chuck_Type * rhs );
-t_CKBOOL isprim( Chuck_Type * type );
-t_CKBOOL isobj( Chuck_Type * type );
-t_CKBOOL isfunc( Chuck_Type * type );
-t_CKBOOL iskindofint( Chuck_Type * type ); // added 1.3.1.0: this includes int + pointers
-t_CKUINT getkindof( Chuck_Type * type ); // added 1.3.1.0: to get the kindof a type
+t_CKBOOL isprim( Chuck_Env * env, Chuck_Type * type );
+t_CKBOOL isobj( Chuck_Env * env, Chuck_Type * type );
+t_CKBOOL isfunc( Chuck_Env * env, Chuck_Type * type );
+t_CKBOOL iskindofint( Chuck_Env * env, Chuck_Type * type ); // added 1.3.1.0: this includes int + pointers
+t_CKUINT getkindof( Chuck_Env * env, Chuck_Type * type ); // added 1.3.1.0: to get the kindof a type
 
 // import
 Chuck_Type * type_engine_import_class_begin( Chuck_Env * env, Chuck_Type * type, 
@@ -863,7 +883,10 @@ t_CKBOOL type_engine_register_deprecate( Chuck_Env * env,
 // helpers
 t_CKBOOL type_engine_check_reserved( Chuck_Env * env, const std::string & xid, int pos );
 t_CKBOOL type_engine_check_reserved( Chuck_Env * env, S_Symbol xid, int pos );
-t_CKBOOL type_engine_check_primitive( Chuck_Type * type );
+// 1.4.1.0 (ge): abilty to toggle reserved words for special cases, such as Math.pi co-existing with pi (use with care!)
+t_CKVOID type_engine_enable_reserved( Chuck_Env * env, const std::string & xid, t_CKBOOL value );
+t_CKBOOL type_engine_check_primitive( Chuck_Env * env, Chuck_Type * type );
+t_CKBOOL type_engine_check_const( Chuck_Env * env, a_Exp e, int pos ); // TODO
 t_CKBOOL type_engine_compat_func( a_Func_Def lhs, a_Func_Def rhs, int pos, std::string & err, t_CKBOOL print = TRUE );
 t_CKBOOL type_engine_get_deprecate( Chuck_Env * env, const std::string & from, std::string & to );
 Chuck_Type  * type_engine_find_common_anc( Chuck_Type * lhs, Chuck_Type * rhs );
@@ -892,33 +915,33 @@ const char * howmuch2str( te_HowMuch how_much );
 t_CKBOOL escape_str( char * str_lit, int linepos );
 t_CKINT str2char( const char * char_lit, int linepos );
 
-// default types
-extern Chuck_Type t_void;
-extern Chuck_Type t_int;
-extern Chuck_Type t_float;
-extern Chuck_Type t_time;
-extern Chuck_Type t_dur;
-extern Chuck_Type t_complex;
-extern Chuck_Type t_polar;
-extern Chuck_Type t_vec3; // ge: added 1.3.5.3
-extern Chuck_Type t_vec4; // ge: added 1.3.5.3
-extern Chuck_Type t_vector;
-extern Chuck_Type t_object;
-extern Chuck_Type t_null;
-extern Chuck_Type t_string;
-extern Chuck_Type t_array;
-extern Chuck_Type t_shred;
-extern Chuck_Type t_thread;
-extern Chuck_Type t_function;
-extern Chuck_Type t_class;
-extern Chuck_Type t_event;
-extern Chuck_Type t_io;
-extern Chuck_Type t_fileio;
-extern Chuck_Type t_chout;
-extern Chuck_Type t_cherr;
-extern Chuck_Type t_ugen;
-extern Chuck_Type t_uana;
-extern Chuck_Type t_uanablob;
+// REFACTOR-2017: exile! these default types now stored in env
+//extern Chuck_Type t_void;
+//extern Chuck_Type t_int;
+//extern Chuck_Type t_float;
+//extern Chuck_Type t_time;
+//extern Chuck_Type t_dur;
+//extern Chuck_Type t_complex;
+//extern Chuck_Type t_polar;
+//extern Chuck_Type t_vec3; // ge: added 1.3.5.3
+//extern Chuck_Type t_vec4; // ge: added 1.3.5.3
+//extern Chuck_Type t_vector;
+//extern Chuck_Type t_object;
+//extern Chuck_Type t_null;
+//extern Chuck_Type t_string;
+//extern Chuck_Type t_array;
+//extern Chuck_Type t_shred;
+//extern Chuck_Type t_thread;
+//extern Chuck_Type t_function;
+//extern Chuck_Type t_class;
+//extern Chuck_Type t_event;
+//extern Chuck_Type t_io;
+//extern Chuck_Type t_fileio;
+//extern Chuck_Type t_chout;
+//extern Chuck_Type t_cherr;
+//extern Chuck_Type t_ugen;
+//extern Chuck_Type t_uana;
+//extern Chuck_Type t_uanablob;
 
 
 

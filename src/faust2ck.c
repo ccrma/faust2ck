@@ -53,6 +53,10 @@ char *util_thread_h[] = {
 #include "util_thread_h.h"
     NULL
 };
+char *chuck_carrier_h[] = {
+#include "chuck_carrier_h.h"
+    NULL
+};
 
 
 typedef struct _variable_t
@@ -489,6 +493,13 @@ int main(int argc, char *argv[])
         goto error;
     }
     
+    if(!write_header(".faust2ck_tmp/chuck_carrier.h", chuck_carrier_h))
+    {
+        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
+        rc = 5;
+        goto error;
+    }
+    
     
     /* generate path-less filename and basename */
     dspfilename = strrchr(inputArgument, '/');
@@ -519,7 +530,30 @@ int main(int argc, char *argv[])
     }
     
     snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
+   
+       
+    /* remove "meta" lines from FAUST XML output because of parse limitations */
+    snprintf(cmd, BUF_SIZE, "sed '/\\<meta/d' %s > %s.tmp", xmlfilepath, xmlfilepath);
+    printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to remove \"meta\" from XML file\n");
+        rc = 5;
+        goto error;
+    }
     
+    /* mv file - handles Mac/Linux differences between sed -i */
+    snprintf(cmd, BUF_SIZE, "mv %s.tmp %s", xmlfilepath, xmlfilepath);
+    printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to mv %s.tmp to %s\n", xmlfilepath, xmlfilepath);
+        rc = 5;
+        goto error;
+    }
+ 
     /* parse the XML */
     fxml = fopen(xmlfilepath, "r");
 
@@ -585,7 +619,7 @@ int main(int argc, char *argv[])
         debugOption = "-g";
     
 #if defined(__APPLE__)
-    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -mmacosx-version-min=10.5 -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -fPIC -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -I.faust2ck_tmp -arch x86_64 -shared -O3 -fPIC %s -lc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
