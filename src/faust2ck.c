@@ -532,13 +532,24 @@ int main(int argc, char *argv[])
     snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
    
        
-    /* remove "meta" lines from FAUST XML output because of parse limitations*/
-    snprintf(cmd, BUF_SIZE, "sed -i '/\\<meta/d' %s", xmlfilepath);
+    /* remove "meta" lines from FAUST XML output because of parse limitations */
+    snprintf(cmd, BUF_SIZE, "sed '/\\<meta/d' %s > %s.tmp", xmlfilepath, xmlfilepath);
     printf("%s\n", cmd);
     result = system(cmd);
     if(result != 0)
     {
-        fprintf(stderr, "error: unable remove \"meta\" from XML file\n");
+        fprintf(stderr, "error: unable to remove \"meta\" from XML file\n");
+        rc = 5;
+        goto error;
+    }
+    
+    /* mv file - handles Mac/Linux differences between sed -i */
+    snprintf(cmd, BUF_SIZE, "mv %s.tmp %s", xmlfilepath, xmlfilepath);
+    printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to mv %s.tmp to %s\n", xmlfilepath, xmlfilepath);
         rc = 5;
         goto error;
     }
