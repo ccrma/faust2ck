@@ -619,7 +619,7 @@ int main(int argc, char *argv[])
         debugOption = "-g";
     
 #if defined(__APPLE__)
-    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -mmacosx-version-min=10.5 -I.faust2ck_tmp -arch i386 -arch x86_64 -shared -O3 -fPIC -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -I.faust2ck_tmp -arch x86_64 -shared -O3 -fPIC %s -lc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
