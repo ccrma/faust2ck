@@ -3,7 +3,7 @@ CC?=cc
 
 CFLAGS=-std=c99
 
-CHUCK_HEADERS=chuck_dl.h chuck_def.h chuck_oo.h util_thread.h
+CHUCK_HEADERS=chuck_dl.h chuck_def.h chuck_oo.h util_thread.h chuck_carrier.h
 CHUCK_HEADER_HEADERS=$(addsuffix _h.h,$(basename $(CHUCK_HEADERS)))
 
 faust2ck: faust2ck.o
