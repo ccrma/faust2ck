@@ -1,4 +1,4 @@
-###faust2ck - A FAUST wrapper-generator for ChucK Ugens.
+### faust2ck - A FAUST wrapper-generator for ChucK Ugens.
 ========
 
 FAUST is a functional language for defining DSP structures that can be
@@ -24,7 +24,7 @@ This document describes how to use faust2ck.
 This code is directly based off of Scott Sinclair's original faust2ck, 
 without which this latest iteration would not exist.
 
-##Build/Install
+## Build/Install
 =============
 
 To build faust2ck, first download the source:
@@ -40,7 +40,7 @@ Then install!
 
 $ sudo make install
 
-Usage
+## Usage
 =====
 
 Running faust2ck with no parameters will give you a usage string:
