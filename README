@@ -1,0 +1,71 @@
+### faust2ck - A FAUST wrapper-generator for ChucK Ugens.
+========
+
+FAUST is a functional language for defining DSP structures that can be
+used for real-time audio computing.  It can generate block diagrams
+and also C++ code which will execute the given routine.
+
+This is an ideal way to create unit generators (UGens) for ChucK.  The
+ChucK data structures can be a bit weird and the learning curve for
+hacking on ChucK can be a little steep.  Using FAUST, you can
+concentrate on the DSP algorithm, and allow faust2ck to take care of
+creating ChucK-compatible C++ code so that you can instantiate your
+new DSP object in a ChucK program.
+
+Please see the FAUST websites for more details, online tutorials, and
+even an online compiler that you can try:
+
+http://faust.grame.fr/
+https://fausteditor.grame.fr/
+https://faustide.grame.fr/
+
+This document describes how to use faust2ck.
+
+This code is directly based off of Scott Sinclair's original faust2ck, 
+without which this latest iteration would not exist.
+
+## Build/Install
+=============
+
+To build faust2ck, first download the source:
+
+$ git clone https://github.com/spencersalazar/faust2ck.git
+
+Then compile:
+
+$ cd faust2ck/src
+$ make
+
+Then install!
+
+$ sudo make install
+
+Usage
+=====
+
+Running faust2ck with no parameters will give you a usage string:
+
+$ faust2ck 
+Usage: faust2ck <filename.dsp>
+
+You can see that it requires a single input, the name of a FAUST .dsp file.
+How you come up with this .dsp file is beyond the scope of this document, 
+but check out here: http://faust.grame.fr/examples.html for some 
+cool examples.
+
+When you execute faust2ck with a suitable .dsp file:
+
+$ faust2ck filename.dsp
+
+it will generate a ChuGin called "filename.chug". You can load this into ChucK
+with the -g option:
+
+$ chuck -gfilename
+
+but chuck will exit immediately because you haven't provided it with a script
+to run. If you want to load your new ChuGin without the annoying -g option, 
+simply copy it to your ChuGin directory (typically /usr/local/lib/chuck). 
+
+
+
+
