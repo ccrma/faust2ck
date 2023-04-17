@@ -1,4 +1,4 @@
-faust2ck - A FAUST wrapper-generator for ChucK Ugens.
+###faust2ck - A FAUST wrapper-generator for ChucK Ugens.
 ========
 
 FAUST is a functional language for defining DSP structures that can be
@@ -16,15 +16,15 @@ Please see the FAUST websites for more details, online tutorials, and
 even an online compiler that you can try:
 
 http://faust.grame.fr/
-http://sourceforge.net/projects/faudiostream/
+https://fausteditor.grame.fr/
+https://faustide.grame.fr/
 
 This document describes how to use faust2ck.
 
 This code is directly based off of Scott Sinclair's original faust2ck, 
-without which this latest iteration would not exist:
-http://www.music.mcgill.ca/~sinclair/content/blog/faust2ck_a_faust_wrapper-generator_for_chuck_ugens
+without which this latest iteration would not exist.
 
-Build/Install
+##Build/Install
 =============
 
 To build faust2ck, first download the source:
@@ -66,41 +66,6 @@ but chuck will exit immediately because you haven't provided it with a script
 to run. If you want to load your new ChuGin without the annoying -g option, 
 simply copy it to your ChuGin directory (typically /usr/local/lib/chuck). 
 
-License
-=======
 
-This code is licensed under the GNU General Public License (GPL) v2 or
-above.  Please see COPYING for details, or visit:
-
-http://www.gnu.org/licenses/old-licenses/gpl-2.0.html
-
-
-
-Technical
-=========
-
-You wrote a string parsing and XML reading program
-like this, in 2008, in C ???!  Are you mad?
---------------------------------------------------
-
-Yes, a sane person would probably not do such a thing.  The FAUST XML
-output is so simple, however, and generally predictable, that I didn't
-feel it was necessary to bring in a lot of external dependencies for
-such a small application.  So I ended up basically writing a small,
-inadequate macro replacement parser, which was actually kind of fun.
-Of course, if it ever called for more a complex solution I'd probably
-re-do it in Perl or Python.  But this'll do for now, and it means the
-program is tiny and easy to execute on any computer without installing
-huge libraries.
-
-Of course, it does depend on 'sed' to generate the template for
-inclusion in the final program.  I wanted to include it right in the
-executable instead of having faust2ck load an external file that would
-always be exactly the same.  Unfortunately the C preprocessor doesn't
-make it easy, so sed is just used to wrap lines of the template file
-in double-quotes ("") and backslash-escape a few special characters.
-
-faust2ck is distributed with the template already generated so that it
-can be compiled without needing to have sed around.
 
 
