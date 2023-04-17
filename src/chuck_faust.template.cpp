@@ -9,7 +9,61 @@
 #include <map>
 #include <string>
 #include <cmath>
-#include <<algorithm>>
+#include <algorithm>
+
+//-------------------------------------------------------------------
+// Generic min and max using C++ inline
+//-------------------------------------------------------------------
+
+#ifndef WIN32
+
+inline int      max (unsigned int a, unsigned int b) { return (a>b) ? a : b; }
+inline int      max (int a, int b)          { return (a>b) ? a : b; }
+
+inline long     max (long a, long b)        { return (a>b) ? a : b; }
+inline long     max (int a, long b)         { return (a>b) ? a : b; }
+inline long     max (long a, int b)         { return (a>b) ? a : b; }
+
+inline float    max (float a, float b)      { return (a>b) ? a : b; }
+inline float    max (int a, float b)        { return (a>b) ? a : b; }
+inline float    max (float a, int b)        { return (a>b) ? a : b; }
+inline float    max (long a, float b)       { return (a>b) ? a : b; }
+inline float    max (float a, long b)       { return (a>b) ? a : b; }
+
+inline double   max (double a, double b)    { return (a>b) ? a : b; }
+inline double   max (int a, double b)       { return (a>b) ? a : b; }
+inline double   max (double a, int b)       { return (a>b) ? a : b; }
+inline double   max (long a, double b)      { return (a>b) ? a : b; }
+inline double   max (double a, long b)      { return (a>b) ? a : b; }
+inline double   max (float a, double b)     { return (a>b) ? a : b; }
+inline double   max (double a, float b)     { return (a>b) ? a : b; }
+
+
+inline int      min (int a, int b)          { return (a<b) ? a : b; }
+
+inline long     min (long a, long b)        { return (a<b) ? a : b; }
+inline long     min (int a, long b)         { return (a<b) ? a : b; }
+inline long     min (long a, int b)         { return (a<b) ? a : b; }
+
+inline float    min (float a, float b)      { return (a<b) ? a : b; }
+inline float    min (int a, float b)        { return (a<b) ? a : b; }
+inline float    min (float a, int b)        { return (a<b) ? a : b; }
+inline float    min (long a, float b)       { return (a<b) ? a : b; }
+inline float    min (float a, long b)       { return (a<b) ? a : b; }
+
+inline double   min (double a, double b)    { return (a<b) ? a : b; }
+inline double   min (int a, double b)       { return (a<b) ? a : b; }
+inline double   min (double a, int b)       { return (a<b) ? a : b; }
+inline double   min (long a, double b)      { return (a<b) ? a : b; }
+inline double   min (double a, long b)      { return (a<b) ? a : b; }
+inline double   min (float a, double b)     { return (a<b) ? a : b; }
+inline double   min (double a, float b)     { return (a<b) ? a : b; }
+
+#endif // ndef WIN32
+
+inline int      lsr (int x, int n)          { return int(((unsigned int)x) >> n); }
+inline int      int2pow2 (int x)            { int r=0; while ((1<<r)<x) r++; return r; }
+
 
 /******************************************************************************
  *******************************************************************************
@@ -74,7 +128,7 @@ class dsp
 {
     public:
         virtual ~dsp() {}
-    
+
         virtual int getNumInputs() = 0;
         virtual int getNumOutputs() = 0;
         virtual void buildUserInterface(UI* interface) = 0;
@@ -87,10 +141,9 @@ class dsp
         virtual dsp* clone() = 0;
         virtual void metadata(Meta* m) = 0;
         virtual void compute(int len, FAUSTFLOAT** inputs, FAUSTFLOAT** outputs) = 0;
-        
+
         SAMPLE ** ck_frame_in;
         SAMPLE ** ck_frame_out;
-
 };
 
 /*
@@ -142,6 +195,7 @@ CK_DLL_DTOR(%dsp_name%_dtor)
 
     delete[] d->ck_frame_in;
     delete[] d->ck_frame_out;
+    
     delete d;
     
     OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data) = 0;
@@ -154,6 +208,7 @@ CK_DLL_TICK(%dsp_name%_tick)
     
     d->ck_frame_in[0] = &in;
     d->ck_frame_out[0] = out;
+
     d->compute(1, d->ck_frame_in, d->ck_frame_out);
     
     return TRUE;
@@ -164,10 +219,10 @@ CK_DLL_TICKF(%dsp_name%_tickf)
 {
     %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
     
-    for (int f = 0; f < nframes; f++)
+    for(int f = 0; f < nframes; f++)
     {
         // fake-deinterleave
-        for (int c = 0; c < g_nChans; c++)
+        for(int c = 0; c < g_nChans; c++)
         {
             d->ck_frame_in[c] = &in[f*g_nChans+c];
             d->ck_frame_out[c] = &out[f*g_nChans+c];
@@ -196,7 +251,7 @@ CK_DLL_QUERY(%dsp_name%_query)
     
     g_nChans = max(temp.getNumInputs(), temp.getNumOutputs());
     
-    if (g_nChans == 1)
+    if(g_nChans == 1)
         QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
     else
         QUERY->add_ugen_funcf(QUERY, %dsp_name%_tickf, NULL, g_nChans, g_nChans);
@@ -209,10 +264,12 @@ CK_DLL_QUERY(%dsp_name%_query)
 
     // end import
 	QUERY->end_class(QUERY);
+	
     return TRUE;
 
 error:
     // end import
 	QUERY->end_class(QUERY);
+
     return FALSE;
 }
