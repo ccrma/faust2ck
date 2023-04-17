@@ -9,7 +9,7 @@
 #include <map>
 #include <string>
 #include <cmath>
-#include <<algorithm>>
+#include <algorithm>
 
 /******************************************************************************
  *******************************************************************************
@@ -194,7 +194,7 @@ CK_DLL_QUERY(%dsp_name%_query)
     QUERY->add_ctor(QUERY, %dsp_name%_ctor);
     QUERY->add_dtor(QUERY, %dsp_name%_dtor);
     
-    g_nChans = max(temp.getNumInputs(), temp.getNumOutputs());
+    g_nChans = std::max(temp.getNumInputs(), temp.getNumOutputs());
     
     if (g_nChans == 1)
         QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
