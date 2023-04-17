@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,6 +57,7 @@ char *chuck_carrier_h[] = {
     NULL
 };
 
+
 typedef struct _variable_t
 {
     char name[256];
@@ -75,7 +75,7 @@ char dspname[256] = "mydsp";
 int in_widget = 0;
 char outfilename[2048];
 
-static void strip(char *to, const char *from, int quotes, int replace_spaces)
+void strip(char *to, const char *from, int quotes, int replace_spaces)
 {
     int i=0, j=0;
     // trim any leading garbage
@@ -99,7 +99,7 @@ static void strip(char *to, const char *from, int quotes, int replace_spaces)
         to[j--] = 0;
 }
 
-static void on_beg_tag(char *name)
+void on_beg_tag(char *name)
 {
     /* TODO: here would be a good place for parsing attributes if we
      * were interested in doing so. */
@@ -117,7 +117,7 @@ static void on_beg_tag(char *name)
     }
 }
 
-static void on_end_tag(char *name, char *value)
+void on_end_tag(char *name, char *value)
 {
     if (strcmp(name, "widget")==0) {
         in_widget = 0;
@@ -161,7 +161,7 @@ static void on_end_tag(char *name, char *value)
  * See the technical section of README for an explanation of this insanity.
  */
 
-static int parseXml(FILE* f)
+int parseXml(FILE* f)
 {
     typedef enum 
     {
@@ -257,9 +257,9 @@ static int parseXml(FILE* f)
     return 0;
 }
 
-static void do_template(char *template[]);
+void do_template(char *template[]);
 
-static int on_replace(char *var)
+int on_replace(char *var)
 {
     if (strcmp(var, "dsp_name")==0) {
         fprintf(out, "%s", dspname);
@@ -291,7 +291,7 @@ static int on_replace(char *var)
     return 0;
 }
 
-static void do_template(char *template[])
+void do_template(char *template[])
 {
     int line, pos, k, i;
     char str[256];
@@ -321,7 +321,7 @@ static void do_template(char *template[])
     }
 }
 
-static int write_header(char *filename, char *lines[])
+int write_header(char *filename, char *lines[])
 {
     FILE * file = NULL;
     int r = 0;
@@ -343,14 +343,15 @@ error:
     
     if(file)
         fclose(file);
+    
     return r;
 }
 
-static int do_example(FILE *exOut)
+int do_example(FILE *exOut)
 {
     char firstLetter = dspname[0];
     
-    if (num_inputs > 0)
+    if(num_inputs > 0)   
     {
         fprintf(exOut, "SndBuf buf => %s %c => dac;\n", dspname, firstLetter);
         fprintf(exOut, "\"special:dope\" => buf.read;\n\n");
@@ -377,21 +378,24 @@ static int do_example(FILE *exOut)
     }
     
     fprintf(exOut, "5::second => now;\n");
+    
     return 0;
     
 error:
     return -1;
 }
 
-static void usage()
+
+void usage()
 {
     fprintf(stderr, "usage: faust2ck [-x] <filename.dsp>\n");
 }
 
+
 int main(int argc, char *argv[])
 {
-    int i, rc = 0;
-    FILE *fxml = NULL;
+    int i, rc=0;
+    FILE *fxml = 0;
 #define BUF_SIZE 1024
     char *inputArgument = NULL;
     char cmd[BUF_SIZE];
@@ -408,10 +412,11 @@ int main(int argc, char *argv[])
 
     variables.next = NULL;
     
+    
     /* loop through input arguments */
-    for (int i = 1; i < argc; i++)
+    for(int i = 1; i < argc; i++)
     {
-        if (strcmp("-x", argv[i]) == 0)
+        if(strcmp("-x", argv[i]) == 0)
         {
             generateExample = 1;
         }
@@ -440,7 +445,7 @@ int main(int argc, char *argv[])
     snprintf(cmd, BUF_SIZE, "mkdir .faust2ck_tmp");
     //printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to make temporary work directory\n");
         rc = 5;
@@ -451,7 +456,7 @@ int main(int argc, char *argv[])
     snprintf(cmd, BUF_SIZE, "cp '%s' .faust2ck_tmp/", inputArgument);
     //printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to copy .dsp file to temporary work directory\n");
         rc = 5;
@@ -459,48 +464,49 @@ int main(int argc, char *argv[])
     }
     
     /* write out headers to tmp directory */
-    if (!write_header(".faust2ck_tmp/chuck_dl.h", chuck_dl_h))
+    if(!write_header(".faust2ck_tmp/chuck_dl.h", chuck_dl_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
     
-    if (!write_header(".faust2ck_tmp/chuck_def.h", chuck_def_h))
+    if(!write_header(".faust2ck_tmp/chuck_def.h", chuck_def_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
     
-    if (!write_header(".faust2ck_tmp/chuck_oo.h", chuck_oo_h))
+    if(!write_header(".faust2ck_tmp/chuck_oo.h", chuck_oo_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
     
-    if (!write_header(".faust2ck_tmp/util_thread.h", util_thread_h))
+    if(!write_header(".faust2ck_tmp/util_thread.h", util_thread_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
     
-    if (!write_header(".faust2ck_tmp/chuck_carrier.h", chuck_carrier_h))
+    if(!write_header(".faust2ck_tmp/chuck_carrier.h", chuck_carrier_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
+    
     
     /* generate path-less filename and basename */
     dspfilename = strrchr(inputArgument, '/');
-    if (dspfilename == NULL) // '/' not found
+    if(dspfilename == NULL) // '/' not found
         dspfilename = inputArgument;
     else
         dspfilename = dspfilename+1;
-    if (strrchr(dspfilename, '.') == NULL) // '.' not found
+    if(strrchr(dspfilename, '.') == NULL) // '.' not found
         strncpy(basename, dspfilename, BUF_SIZE);
     else
     {
@@ -515,7 +521,7 @@ int main(int argc, char *argv[])
     snprintf(cmd, BUF_SIZE, "faust -xml '.faust2ck_tmp/%s' > /dev/null", dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to generate XML file\n");
         rc = 5;
@@ -523,12 +529,13 @@ int main(int argc, char *argv[])
     }
     
     snprintf(xmlfilepath, BUF_SIZE, ".faust2ck_tmp/%s.xml", dspfilename);
+   
        
     /* remove "meta" lines from FAUST XML output because of parse limitations */
     snprintf(cmd, BUF_SIZE, "sed '/\\<meta/d' %s > %s.tmp", xmlfilepath, xmlfilepath);
     printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to remove \"meta\" from XML file\n");
         rc = 5;
@@ -539,7 +546,7 @@ int main(int argc, char *argv[])
     snprintf(cmd, BUF_SIZE, "mv %s.tmp %s", xmlfilepath, xmlfilepath);
     printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to mv %s.tmp to %s\n", xmlfilepath, xmlfilepath);
         rc = 5;
@@ -564,10 +571,11 @@ int main(int argc, char *argv[])
     fclose(fxml);
     fxml = 0;
     
+    
     /* determine output file name */
     
     strcpy(outfilename, xmlfilepath);
-    i = strlen(outfilename)-1;
+    i=strlen(outfilename)-1;
     while (i>0 && outfilename[i]!='.')
         i--;
     if (i==0) i=strlen(outfilename);
@@ -575,6 +583,7 @@ int main(int argc, char *argv[])
     
     
     /* generate customized FAUST architecture file from template */
+    
     out = fopen(outfilename, "w");
     if (!out) {
         printf("Could not open output file %s\n", outfilename);
@@ -583,24 +592,29 @@ int main(int argc, char *argv[])
     }
 
     do_template(chuck_faust_template);
+    
     fclose(out);
     out = NULL;
     
+    
     /* compile FAUST input with customized arch file */
+    
     snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
              outfilename, dspfilename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to generate .cpp file\n");
         rc = 5;
         goto error;
     }
     
+    
     /* compile the resulting FAUST output with platform specific compiler */
+    
     const char *debugOption = "";
-    if (f2ckDebug)
+    if(f2ckDebug)
         debugOption = "-g";
     
 #if defined(__APPLE__)
@@ -608,7 +622,7 @@ int main(int argc, char *argv[])
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
-    if (result != 0)
+    if(result != 0)
     {
         fprintf(stderr, "error: unable to compile .cpp file\n");
         rc = 5;
@@ -643,10 +657,13 @@ int main(int argc, char *argv[])
     }
     
 #else
+
 #error no target platform (e.g. Mac OS, Linux, or Win32)
+
 #endif
     
     /* generate example */
+    
     if(generateExample)
     {
         snprintf(exampleFilename, BUF_SIZE, "%s-test.ck", dspname);
@@ -668,7 +685,8 @@ int main(int argc, char *argv[])
 error:
     
     /* clear tmp directory */
-    if (!leaveBuildProducts)
+    
+    if(!leaveBuildProducts)
         system("rm -rf .faust2ck_tmp");
     
     if (fxml)
@@ -677,7 +695,7 @@ error:
     if (out && out!=stdout)
         fclose(out);
     
-    if (exOut)
+    if(exOut)
         fclose(exOut);
 
     variable_t *v = variables.next;
