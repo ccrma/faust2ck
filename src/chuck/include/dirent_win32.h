@@ -56,7 +56,16 @@
 #ifndef DIRENT_H
 #define DIRENT_H
 
-#include <windows.h>
+
+// assume windows...
+#ifndef __CHUNREAL_ENGINE__
+  #include <windows.h>
+#else
+  // 1.5.0.0 (ge) | #chunreal
+  // unreal engine on windows disallows including windows.h
+  #include "Windows/MinWindows.h"
+#endif // #ifndef __CHUNREAL_ENGINE__
+
 #include <string.h>
 #include <assert.h>
 
@@ -193,7 +202,7 @@ readdir(
   } else {
     /* read next directory entry from disk */
     if (FindNextFileA (dirp->search_handle, &dirp->current.data) == FALSE) {
-      /* the very last file has been processed or an error occured */
+      /* the very last file has been processed or an error occurred */
       FindClose (dirp->search_handle);
       dirp->search_handle = INVALID_HANDLE_VALUE;
       return NULL;

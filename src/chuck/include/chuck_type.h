@@ -52,7 +52,7 @@ typedef enum {
     te_function, te_object, te_user, te_array, te_null, te_ugen, te_uana,
     te_event, te_void, te_stdout, te_stderr, te_adc, te_dac, te_bunghole,
     te_uanablob, te_io, te_fileio, te_chout, te_cherr, te_multi,
-    te_vec3, te_vec4, te_vector // ge: added 1.3.5.3
+    te_vec2, te_vec3, te_vec4, te_vector, te_auto
 } te_Type;
 
 
@@ -63,7 +63,7 @@ typedef enum {
 // desc: ChucK types for global vars: int, float, (subclass of) Event
 //       (REFACTOR-2017)
 //-----------------------------------------------------------------------------
-typedef enum {
+typedef enum { te_globalTypeNone,
     te_globalInt, te_globalFloat, te_globalString, te_globalEvent,
     te_globalUGen, te_globalObject,
     // symbol: not used for declarations, only for later lookups :/
@@ -174,7 +174,7 @@ public:
         // add for commit
         else commit_map[xid] = value;
         // add reference
-        SAFE_ADD_REF(value);
+        CK_SAFE_ADD_REF(value);
     }
 
     // lookup id
@@ -198,7 +198,10 @@ public:
         else if( climb > 0 )
         {
             for( t_CKUINT i = scope.size(); i > 0; i-- )
-            { if( ( val = (*scope[i-1])[xid] ) ) break; }
+            {
+                val = (*scope[i - 1])[xid];
+                if( val ) break;
+            }
 
             // look in commit buffer
             if( !val && (commit_map.find(xid) != commit_map.end()) )
@@ -225,14 +228,24 @@ public:
     // get list of top level
     void get_toplevel( std::vector<Chuck_VM_Object *> & out, t_CKBOOL includeMangled = TRUE )
     {
-        assert( scope.size() != 0 );
-        std::map<S_Symbol, Chuck_VM_Object *>::iterator iter;
+        // pass on
+        get_level( 0, out, includeMangled );
+    }
 
+    // get list of top level
+    void get_level( int level, std::vector<Chuck_VM_Object *> & out, t_CKBOOL includeMangled = TRUE )
+    {
+        assert( scope.size() > level );
         // clear the out
         out.clear();
-        // get the front of the array
-        std::map<S_Symbol, Chuck_VM_Object *> * m = scope.front();
 
+        // our iterator
+        std::map<S_Symbol, Chuck_VM_Object *>::iterator iter;
+        // get func map
+        std::map<S_Symbol, Chuck_VM_Object *> * m = NULL;
+
+        // 1.5.0.5 (ge) modified: actually use level
+        m = scope[level];
         // go through map
         for( iter = m->begin(); iter != m->end(); iter++ )
         {
@@ -242,28 +255,20 @@ public:
             // add
             out.push_back( (*iter).second );
         }
-    }
 
-    // get list of top level
-    void get_level( int level, std::vector<Chuck_VM_Object *> & out, t_CKBOOL includeMangled = TRUE )
-    {
-        assert( scope.size() >= level );
-        std::map<S_Symbol, Chuck_VM_Object *>::iterator iter;
-
-        // clear the out
-        out.clear();
-        // get the front of the array
-        std::map<S_Symbol, Chuck_VM_Object *> * m = &commit_map;
-
-        // go through map
-        for( iter = m->begin(); iter != m->end(); iter++ )
+        // if level 0 then also include commit map | 1.5.0.5 (ge) added
+        if( level == 0 )
         {
-            // check mangled name
-            if( !includeMangled && is_mangled( std::string(S_name((*iter).first))) )
-                continue;
-
-            // add
-            out.push_back( (*iter).second );
+            m = &commit_map;
+            // go through map
+            for( iter = m->begin(); iter != m->end(); iter++ )
+            {
+                // check mangled name
+                if( !includeMangled && is_mangled( std::string(S_name((*iter).first))) )
+                    continue;
+                // add
+                out.push_back( (*iter).second );
+            }
         }
     }
 
@@ -275,14 +280,21 @@ protected:
 
 
 
-// forward reference
+//-----------------------------------------------------------------------------
+// forward references
+//-----------------------------------------------------------------------------
 struct Chuck_Type;
 struct Chuck_Value;
 struct Chuck_Func;
 struct Chuck_Multi;
 struct Chuck_VM;
 struct Chuck_VM_Code;
+struct Chuck_VM_MFunInvoker;
 struct Chuck_DLL;
+// operator loading structs | 1.5.1.5
+struct Chuck_Op_Registry;
+struct Chuck_Op_Semantics;
+struct Chuck_Op_Overload;
 
 
 
@@ -321,20 +333,20 @@ struct Chuck_Namespace : public Chuck_VM_Object
                         class_data = NULL; class_data_size = 0; }
     // destructor
     virtual ~Chuck_Namespace() {
-        /* TODO: SAFE_RELEASE( this->parent ); */
-        /* TODO: SAFE_DELETE( pre_ctor ); */
-        /* TODO: SAFE_DELETE( dtor ); */
+        /* TODO: CK_SAFE_RELEASE( this->parent ); */
+        /* TODO: CK_SAFE_DELETE( pre_ctor ); */
+        /* TODO: CK_SAFE_DELETE( dtor ); */
     }
 
-    // look up type
-    Chuck_Type * lookup_type( const std::string & name, t_CKINT climb = 1 );
-    Chuck_Type * lookup_type( S_Symbol name, t_CKINT climb = 1 );
     // look up value
-    Chuck_Value * lookup_value( const std::string & name, t_CKINT climb = 1 );
-    Chuck_Value * lookup_value( S_Symbol name, t_CKINT climb = 1 );
+    Chuck_Value * lookup_value( const std::string & name, t_CKINT climb = 1, t_CKBOOL stayWithinClassDef = FALSE );
+    Chuck_Value * lookup_value( S_Symbol name, t_CKINT climb = 1, t_CKBOOL stayWithinClassDef = FALSE );
+    // look up type
+    Chuck_Type * lookup_type( const std::string & name, t_CKINT climb = 1, t_CKBOOL stayWithinClassDef = FALSE );
+    Chuck_Type * lookup_type( S_Symbol name, t_CKINT climb = 1, t_CKBOOL stayWithinClassDef = FALSE );
     // look up func
-    Chuck_Func * lookup_func( const std::string & name, t_CKINT climb = 1 );
-    Chuck_Func * lookup_func( S_Symbol name, t_CKINT climb = 1 );
+    Chuck_Func * lookup_func( const std::string & name, t_CKINT climb = 1, t_CKBOOL stayWithinClassDef = FALSE );
+    Chuck_Func * lookup_func( S_Symbol name, t_CKINT climb = 1, t_CKBOOL stayWithinClassDef = FALSE );
 
     // commit the maps
     void commit() {
@@ -369,14 +381,15 @@ struct Chuck_Context : public Chuck_VM_Object
     std::string filename;
     // full filepath (if available) -- added 1.3.0.0
     std::string full_path;
-    // parse tree
-    a_Program parse_tree;
     // context namespace
     Chuck_Namespace * nspc;
-    // public class def if any
-    a_Class_Def public_class_def;
     // error - means to free nspc too
     t_CKBOOL has_error;
+
+    // AST parse tree (does not persist past context unloading)
+    a_Program parse_tree;
+    // AST public class def if any (does not persist past context unloading)
+    a_Class_Def public_class_def;
 
     // progress
     enum { P_NONE = 0, P_CLASSES_ONLY, P_ALL_DONE };
@@ -389,21 +402,20 @@ struct Chuck_Context : public Chuck_VM_Object
     std::vector<Chuck_VM_Object *> new_funcs;
     std::vector<Chuck_VM_Object *> new_nspc;
 
-    // commit map
-    std::map<Chuck_Namespace *, Chuck_Namespace *> commit_map;
-    // add for commit/rollback
-    void add_commit_candidate( Chuck_Namespace * nspc );
-    // commit
-    void commit();
-    // rollback
-    void rollback();
+public:
+    // decouple from AST (called when a context is compiled)
+    // called when a context is finished and being unloaded | 1.5.0.5 (ge)
+    void decouple_ast();
 
+public:
     // constructor
     Chuck_Context() { parse_tree = NULL; nspc = new Chuck_Namespace;
                       public_class_def = NULL; has_error = FALSE;
                       progress = P_NONE; }
     // destructor
     virtual ~Chuck_Context();
+
+public:
     // get the top-level code
     Chuck_VM_Code * code() { return nspc->pre_ctor; }
 
@@ -418,21 +430,279 @@ struct Chuck_Context : public Chuck_VM_Object
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Op_Registry | 1.5.1.5 (ge) added
+// desc: operator overloading registry
+//-----------------------------------------------------------------------------
+struct Chuck_Op_Registry
+{
+public:
+    // constructor
+    Chuck_Op_Registry();
+    // destructor
+    ~Chuck_Op_Registry();
+
+public:
+    // add semantics for particular operator
+    Chuck_Op_Semantics * add( ae_Operator op );
+    // get semantics for particular operator
+    Chuck_Op_Semantics * lookup( ae_Operator op );
+    // can overload as binary?
+    t_CKBOOL binaryOverloadable( ae_Operator op );
+    // can overload as unary prefix?
+    t_CKBOOL unaryPreOverloadable( ae_Operator op );
+    // can overload as unary postfix?
+    t_CKBOOL unaryPostOverloadable( ae_Operator op );
+
+public:
+    // push registry stack; mark all unmarked overloads with current ID
+    // returns pushID associated with this push
+    t_CKUINT push();
+    // remove all overload greater than previous pushID
+    // return how many levels were popped (1 or 0)
+    t_CKUINT pop();
+    // reset pop local overload state (everything above publicID)
+    void reset2local();
+    // reset pop beyond public state (everything above preserveID)
+    void reset2public();
+    // (system) preserve current state (cannot be popped normally)
+    void preserve();
+    // (system) remove preserve status (allowing pops for all stack levels)
+    void unpreserve();
+    // get the current stack ID
+    t_CKUINT stackLevel() const { return m_stackID; }
+
+public:
+    // reserve builtin overloads
+    void reserve( Chuck_Type * lhs, ae_Operator op, Chuck_Type * rhs, t_CKBOOL commute = FALSE );
+    // reserve prefix
+    void reserve( ae_Operator op, Chuck_Type * type );
+    // reserve postfix
+    void reserve( Chuck_Type * type, ae_Operator op );
+
+    // add binary operator overload: lhs OP rhs
+    t_CKBOOL add_overload( Chuck_Type * lhs, ae_Operator op, Chuck_Type * rhs, Chuck_Func * func, 
+                           te_Origin origin, const std::string & originName = "", t_CKINT originWhere = 0, t_CKBOOL isPublic = FALSE );
+    // add prefix unary operator overload: OP rhs
+    t_CKBOOL add_overload( ae_Operator op, Chuck_Type * rhs, Chuck_Func * func,
+                           te_Origin origin, const std::string & originName = "", t_CKINT originWhere = 0, t_CKBOOL isPublic = FALSE );
+    // add postfix unary operator overload: lhs OP
+    t_CKBOOL add_overload( Chuck_Type * lhs, ae_Operator op, Chuck_Func * func,
+                           te_Origin origin, const std::string & originName = "", t_CKINT originWhere = 0, t_CKBOOL isPublic = FALSE );
+
+    // look up binary operator overload: lhs OP rhs
+    Chuck_Op_Overload * lookup_overload( Chuck_Type * lhs, ae_Operator op, Chuck_Type * rhs );
+    // look up prefix unary operator overload: OP rhs
+    Chuck_Op_Overload * lookup_overload( ae_Operator op, Chuck_Type * rhs );
+    // look up postfix unary operator overload: lhs OP
+    Chuck_Op_Overload * lookup_overload( Chuck_Type * lhs, ae_Operator op );
+
+protected:
+    // remove all overload greater than pushID
+    // return how many levels were popped
+    t_CKUINT pop( t_CKUINT pushID );
+    // map of operator to its semantic mappings
+    std::map<ae_Operator, Chuck_Op_Semantics *> m_operatorMap;
+    // operator overload stack level
+    t_CKUINT m_stackID;
+    // system-level operator preservation ID (cannot be reset; use unpreserve to undo)
+    t_CKUINT m_stackPreserveID;
+
+public:
+    // user-level public operator overload (can be reset)
+    static const t_CKUINT STACK_PUBLIC_ID;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_TypePair | 1.5.1.5 (ge) added
+// desc: a type pair, used as key in operator overload map
+//-----------------------------------------------------------------------------
+struct Chuck_TypePair
+{
+    // left hand side type
+    Chuck_Type * lhs;
+    // right hand side type
+    Chuck_Type * rhs;
+
+    // constructor
+    Chuck_TypePair( Chuck_Type * LHS = NULL, Chuck_Type * RHS = NULL ) : lhs(LHS), rhs(RHS) { }
+    // copy constructor
+    Chuck_TypePair( const Chuck_TypePair & other ) : lhs(other.lhs), rhs(other.rhs) { }
+    // operator
+    bool operator <( const Chuck_TypePair & other ) const;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Op_Semantics | 1.5.1.5 (ge) added
+// desc: all overloading information for a particualr operator
+//-----------------------------------------------------------------------------
+struct Chuck_Op_Semantics
+{
+protected:
+    // the operator
+    ae_Operator m_op;
+    // is binary overloadable?
+    bool is_overloadable_binary;
+    // is unary prefix overloadable?
+    bool is_overloadable_unary_pre;
+    // is unary postfix overloadable?
+    bool is_overloadable_unary_post;
+    // binary overload map
+    std::map<Chuck_TypePair, Chuck_Op_Overload *> overloads;
+
+public:
+    // constructor
+    Chuck_Op_Semantics( ae_Operator op = ae_op_none );
+    // destructor
+    ~Chuck_Op_Semantics();
+
+public:
+    // configure how operator could be overloaded
+    void configure( bool binary_OL, bool unary_pre_OL, bool unary_post_OL );
+    // is binary overloadable
+    bool isBinaryOL() const { return is_overloadable_binary; }
+    bool isUnaryPreOL() const { return is_overloadable_unary_pre; }
+    bool isUnaryPostOL() const { return is_overloadable_unary_post; }
+
+public:
+    // add overload
+    void add( Chuck_Op_Overload * overload );
+    // remove overloads with mark > pushID
+    void removeAbove( t_CKUINT pushID );
+    // squash all overloads marks to pushID
+    void squashTo( t_CKUINT pushID );
+    // retrieve all overloads for an operator
+    void getOverloads( std::vector<const Chuck_Op_Overload *> & results );
+    // get entry by types
+    Chuck_Op_Overload * getOverload( Chuck_Type * lhs, Chuck_Type * rhs );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Op_Overload | 1.5.1.5 (ge) added
+// desc: a particular overloading
+//-----------------------------------------------------------------------------
+struct Chuck_Op_Overload
+{
+    // where this overload was defined
+    te_Origin m_origin;
+    // origin name
+    std::string m_originName;
+    // origin parse position (if applicable)
+    t_CKINT m_originWhere;
+
+protected:
+    // the operator
+    ae_Operator m_op;
+    // which kind of overload?
+    te_Op_OverloadKind m_kind;
+    // the function to call
+    Chuck_Func * m_func;
+    // left hand side
+    Chuck_Type * m_lhs;
+    // right hand side
+    Chuck_Type * m_rhs;
+    // ID associated with when this overload was created
+    t_CKUINT m_pushID;
+    // is reserved
+    t_CKBOOL m_isReserved;
+
+    // set left hand side type
+    void setLHS( Chuck_Type * type );
+    // set right hand side type
+    void setRHS( Chuck_Type * type );
+    // zero out
+    void zero();
+
+public:
+    // constructor: binary
+    Chuck_Op_Overload( Chuck_Type * LHS, ae_Operator op, Chuck_Type * RHS, Chuck_Func * func );
+    // constructor: postfix
+    Chuck_Op_Overload( Chuck_Type * LHS, ae_Operator op, Chuck_Func * func );
+    // constructor: prefix
+    Chuck_Op_Overload( ae_Operator op, Chuck_Type * RHS, Chuck_Func * func );
+    // copy constructor
+    Chuck_Op_Overload( const Chuck_Op_Overload & other );
+    // destructor
+    ~Chuck_Op_Overload();
+    // operator < for overload
+    bool operator <( const Chuck_Op_Overload & other ) const;
+
+    // update origin info
+    void updateOrigin( te_Origin origin, const std::string & name = "", t_CKINT where = 0 );
+    // update overload stack push ID
+    void mark( t_CKUINT pushID );
+    // set as reserved
+    void updateReserved( t_CKBOOL isReserved ) { m_isReserved = isReserved; }
+    // get is reserved
+    t_CKBOOL reserved() const { return m_isReserved; }
+
+public:
+    // get op
+    ae_Operator op() const { return m_op; }
+    // get the kind of overload
+    te_Op_OverloadKind kind() const { return m_kind; }
+    // get func
+    Chuck_Func * func() const { return m_func; }
+    // get left hand side type
+    Chuck_Type * lhs() const { return m_lhs; }
+    // get right hand side type
+    Chuck_Type * rhs() const { return m_rhs; }
+    // get overload stack push ID
+    t_CKUINT pushID() const { return m_pushID; }
+    // has origin been set?
+    t_CKBOOL hasOrigin() const { return m_origin != te_originUnknown; }
+    // overloading natively handled? (e.g., in chuck_type)
+    t_CKBOOL isNative() const;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Env
-// desc: chuck env with type info
+// desc: chuck type environment; one per VM instance
 //-----------------------------------------------------------------------------
 struct Chuck_Env : public Chuck_VM_Object
 {
 public:
     // constructor
     Chuck_Env();
+    // destructor
+    virtual ~Chuck_Env();
 
 public:
     // initialize
     t_CKBOOL init();
+    // cleanup
+    void cleanup();
 
-// REFACTOR-2017: carrier and accessors
+    // reset the Env
+    void reset();
+    // load user namespace
+    void load_user_namespace();
+    // clear user namespace
+    void clear_user_namespace();
+    // check whether the context is the global context
+    t_CKBOOL is_global();
+    // global namespace
+    Chuck_Namespace * global();
+    // user namespace, if there is one (if not, return global)
+    Chuck_Namespace * user();
+    // get namespace at top of stack
+    Chuck_Namespace * nspc_top();
+    // get type at top of type stack
+    Chuck_Type * class_top();
+
 public:
+    // REFACTOR-2017: carrier and accessors
     void set_carrier( Chuck_Carrier * carrier ) { m_carrier = carrier; }
     Chuck_VM * vm() { return m_carrier ? m_carrier->vm : NULL; }
     Chuck_Compiler * compiler() { return m_carrier ? m_carrier->compiler : NULL; }
@@ -449,17 +719,6 @@ protected:
     Chuck_Namespace * user_nspc;
 
 public:
-    // global namespace
-    Chuck_Namespace * global() { return global_nspc; }
-    // global namespace
-    Chuck_Namespace * user()
-    {
-        if(user_nspc == NULL)
-            return global_nspc;
-        else
-            return user_nspc;
-    }
-
     // namespace stack
     std::vector<Chuck_Namespace *> nspc_stack;
     // expression namespace
@@ -472,6 +731,8 @@ public:
     Chuck_Func * func;
     // how far nested in a class definition
     t_CKUINT class_scope;
+    // are we in a spork operation
+    t_CKBOOL sporking;
 
     // current contexts in memory
     std::vector<Chuck_Context *> contexts;
@@ -486,94 +747,46 @@ public:
     std::map<std::string, t_CKBOOL> key_types;
     std::map<std::string, t_CKBOOL> key_values;
 
+    // operators mapping registry | 1.5.1.5
+    Chuck_Op_Registry op_registry;
+
     // deprecated types
     std::map<std::string, std::string> deprecated;
     // level - 0:stop, 1:warn, 2:ignore
     t_CKINT deprecate_level;
 
-    // destructor
-    virtual ~Chuck_Env();
-
-    // reset
-    void reset( )
-    {
-        // TODO: release stack items?
-        nspc_stack.clear();
-        nspc_stack.push_back( this->global() );
-        if(user_nspc != NULL)
-            nspc_stack.push_back( this->user_nspc );
-        // TODO: release stack items?
-        class_stack.clear(); class_stack.push_back( NULL );
-        // should be at top level
-        assert( context == &global_context );
-        // assign : TODO: release curr? class_def? func?
-        // TODO: need another function, since this is called from constructor
-        if(user_nspc != NULL)
-            curr = this->user();
-        else
-            curr = this->global();
-        class_def = NULL; func = NULL;
-        // make sure this is 0
-        class_scope = 0;
-    }
-
-    void load_user_namespace()
-    {
-        // user namespace
-        user_nspc = new Chuck_Namespace;
-        user_nspc->name = "[user]";
-        user_nspc->parent = global_nspc;
-        SAFE_ADD_REF(global_nspc);
-        SAFE_ADD_REF(user_nspc);
-    }
-
-    void clear_user_namespace()
-    {
-        if(user_nspc) SAFE_RELEASE(user_nspc->parent);
-        SAFE_RELEASE(user_nspc);
-        load_user_namespace();
-        this->reset();
-    }
-
-    // top
-    Chuck_Namespace * nspc_top( )
-    { assert( nspc_stack.size() > 0 ); return nspc_stack.back(); }
-    Chuck_Type * class_top( )
-    { assert( class_stack.size() > 0 ); return class_stack.back(); }
-
-    // check whether the context is the global context
-    t_CKBOOL is_global()
-    { return class_def == NULL && func == NULL && class_scope == 0; }
-
 public:
     // REFACTOR-2017: public types
-    Chuck_Type * t_void;
-    Chuck_Type * t_int;
-    Chuck_Type * t_float;
-    Chuck_Type * t_time;
-    Chuck_Type * t_dur;
-    Chuck_Type * t_complex;
-    Chuck_Type * t_polar;
-    Chuck_Type * t_vec3;
-    Chuck_Type * t_vec4;
-    Chuck_Type * t_null;
-    Chuck_Type * t_function;
-    Chuck_Type * t_object;
-    Chuck_Type * t_array;
-    Chuck_Type * t_string;
-    Chuck_Type * t_event;
-    Chuck_Type * t_ugen;
-    Chuck_Type * t_uana;
-    Chuck_Type * t_uanablob;
-    Chuck_Type * t_shred;
-    Chuck_Type * t_io;
-    Chuck_Type * t_fileio;
-    Chuck_Type * t_chout;
-    Chuck_Type * t_cherr;
-    // Chuck_Type * t_thread;
-    Chuck_Type * t_class;
-    Chuck_Type * t_dac;
-    Chuck_Type * t_adc;
+    Chuck_Type * ckt_void;
+    Chuck_Type * ckt_auto; // 1.5.0.8
+    Chuck_Type * ckt_int;
+    Chuck_Type * ckt_float;
+    Chuck_Type * ckt_time;
+    Chuck_Type * ckt_dur;
+    Chuck_Type * ckt_complex;
+    Chuck_Type * ckt_polar;
+    Chuck_Type * ckt_vec2;
+    Chuck_Type * ckt_vec3;
+    Chuck_Type * ckt_vec4;
+    Chuck_Type * ckt_null;
+    Chuck_Type * ckt_function;
+    Chuck_Type * ckt_object;
+    Chuck_Type * ckt_array;
+    Chuck_Type * ckt_string;
+    Chuck_Type * ckt_event;
+    Chuck_Type * ckt_ugen;
+    Chuck_Type * ckt_uana;
+    Chuck_Type * ckt_uanablob;
+    Chuck_Type * ckt_shred;
+    Chuck_Type * ckt_io;
+    Chuck_Type * ckt_fileio;
+    Chuck_Type * ckt_chout;
+    Chuck_Type * ckt_cherr;
+    Chuck_Type * ckt_class;
+    Chuck_Type * ckt_dac;
+    Chuck_Type * ckt_adc;
+
+    // Chuck_Type * ckt_thread;
 };
 
 
@@ -613,6 +826,91 @@ struct Chuck_UGen_Info : public Chuck_VM_Object
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Value_Dependency
+// desc: a value dependency records when accessing a value; this is used to
+//       for dependency tracking of file-top-level and class-top-level variables
+//       accessed from within functions or class pre-constructor code;
+//
+// example:
+// ```
+// 5 => int foo;
+// fun void bar()
+// {
+//     // below is a dependency to foo
+//     <<< foo >>>;
+// }
+// ```
+//-----------------------------------------------------------------------------
+struct Chuck_Value_Dependency
+{
+    // value we are tracking
+    Chuck_Value * value;
+    // code position of dependency
+    t_CKUINT where;
+    // position where the use occurs (from within func or class)
+    t_CKUINT use_where;
+
+public:
+    // default
+    Chuck_Value_Dependency() : value(NULL), where(0), use_where(0) { }
+    // constructor
+    Chuck_Value_Dependency( Chuck_Value * argValue, t_CKUINT argUseWhere = 0 );
+    // copy constructor | NOTE: needed to properly ref-count
+    Chuck_Value_Dependency( const Chuck_Value_Dependency & rhs );
+    // destructor
+    virtual ~Chuck_Value_Dependency();
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Value_Dependency_Graph
+// desc: data structure of value dependencies, direct and remote
+//-----------------------------------------------------------------------------
+struct Chuck_Value_Dependency_Graph
+{
+public:
+    // add a direct dependency
+    void add( const Chuck_Value_Dependency & dep );
+    // add a remote (recursive) dependency
+    void add( Chuck_Value_Dependency_Graph * graph );
+    // clear all dependencies | to be called when all dependencies are met
+    // for example, at the successful compilation of a context (e.g., a file)
+    // after this, calls to locate() will return NULL, indicating no dependencies
+    // NOTE dependency analysis is for within-context only, and is not needed
+    // across contexts (e.g., files) | 1.5.1.1 (ge) added
+    void clear();
+    // look for a dependency that occurs AFTER a particular code position
+    // this function crawls the graph, taking care in the event of cycles
+    const Chuck_Value_Dependency * locate( t_CKUINT pos, t_CKBOOL isClassDef = FALSE );
+
+public:
+    // constructor
+    Chuck_Value_Dependency_Graph() : token(0) { }
+
+protected:
+    // search token, for cycle detection (not reentrant, thread-wise)
+    t_CKUINT token;
+    // vector of dependencies
+    std::vector<Chuck_Value_Dependency> directs;
+    // vector of recursive dependency graphs
+    // take care regarding circular dependency
+    std::vector<Chuck_Value_Dependency_Graph *> remotes;
+
+protected:
+    // locate non-recursive
+    const Chuck_Value_Dependency * locateLocal( t_CKUINT pos, t_CKBOOL isClassDef );
+    // reset search tokens
+    void resetRecursive( t_CKUINT value = 0 );
+    // locate recursive
+    const Chuck_Value_Dependency * locateRecursive( t_CKUINT pos, t_CKBOOL isClassDef, t_CKUINT searchToken = 1 );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Type
 // desc: class containing information about a type
 // note: 1.5.0.0 (ge) Chuck_VM_Object -> Chuck_Object
@@ -621,8 +919,8 @@ struct Chuck_Type : public Chuck_Object
 {
     // type id
     te_Type xid;
-    // type name
-    std::string name;
+    // type name (FYI use this->str() for full name including []s for array)
+    std::string base_name;
     // type parent (could be NULL)
     Chuck_Type * parent;
     // size (in bytes)
@@ -639,8 +937,6 @@ struct Chuck_Type : public Chuck_Object
     Chuck_Namespace * info;
     // func info
     Chuck_Func * func;
-    // def
-    a_Class_Def def;
     // ugen
     Chuck_UGen_Info * ugen_info;
     // copy
@@ -656,13 +952,16 @@ struct Chuck_Type : public Chuck_Object
     // origin hint
     te_Origin originHint;
 
+    // reference to environment RE-FACTOR 2017
+    Chuck_Env * env_ref;
+
+    // (within-context, e.g., a ck file) dependency tracking | 1.5.0.8
+    Chuck_Value_Dependency_Graph depends;
+
     // documentation
     std::string doc;
     // example files
     std::vector<std::string> examples;
-
-    // reference to environment RE-FACTOR 2017
-    Chuck_Env * m_env;
 
 public:
     // constructor
@@ -673,16 +972,16 @@ public:
                 t_CKUINT _s = 0 );
     // destructor
     virtual ~Chuck_Type();
-        // reset
+    // reset
     void reset();
     // assignment - this does not touch the Chuck_VM_Object
     const Chuck_Type & operator =( const Chuck_Type & rhs );
     // make a copy of this type struct
-    Chuck_Type * copy( Chuck_Env * env ) const;
+    Chuck_Type * copy( Chuck_Env * env, Chuck_Context * context ) const;
 
 public:
-    // to string
-    const std::string & str();
+    // to string: the full name of this type, e.g., "UGen" or "int[][]"
+    const std::string & name();
     // to c string
     const char * c_name();
 
@@ -698,9 +997,9 @@ public: // apropos | 1.4.1.0 (ge)
 
 public: // dump | 1.4.1.1 (ge)
     // generate object state; output to console
-    void dump( Chuck_Object * obj );
+    void dump_obj( Chuck_Object * obj );
     // generate object state; output to string
-    void dump( Chuck_Object * obj, std::string & output );
+    void dump_obj( Chuck_Object * obj, std::string & output );
 
 protected: // apropos-related helper function
     // dump top level info
@@ -711,6 +1010,32 @@ protected: // apropos-related helper function
     void apropos_vars( std::string & output, const std::string & prefix, t_CKBOOL inherited );
     // dump info about examples
     void apropos_examples( std::string & output, const std::string & prefix );
+
+public:
+    // struct to hold callback on instantiate
+    struct CallbackOnInstantiate
+    {
+        // whether to auto-set shred origin at instantiation;
+        // see t_CKBOOL initialize_object( ... )
+        t_CKBOOL shouldSetShredOrigin;
+        // the callback
+        f_callback_on_instantiate callback;
+        // constructor
+        CallbackOnInstantiate( f_callback_on_instantiate cb = NULL, t_CKBOOL setShredOrigin = FALSE )
+        : callback(cb), shouldSetShredOrigin(setShredOrigin) { }
+    };
+    // register type instantiation callback
+    void add_instantiate_cb( f_callback_on_instantiate cb, t_CKBOOL setShredOrigin );
+    // unregister type instantiation callback
+    void remove_instantiate_cb( f_callback_on_instantiate cb );
+    // get vector of callbacks (including this and parents), return whether any requires setShredOrigin
+    t_CKBOOL cbs_on_instantiate( std::vector<CallbackOnInstantiate> & results );
+
+protected:
+    // vector of callbacks on instantiation of this type (or its subclass)
+    std::vector<CallbackOnInstantiate> m_cbs_on_instantiate;
+    // internal get vector of callbacks (including this and parents), return whether any requires setShredOrigin
+    t_CKBOOL do_cbs_on_instantiate( std::vector<CallbackOnInstantiate> & results );
 };
 
 
@@ -753,33 +1078,21 @@ struct Chuck_Value : public Chuck_VM_Object
     // overloads
     t_CKINT func_num_overloads;
 
+    // dependency tracking | 1.5.0.8 (ge) added
+    // code position of where this value is considered initialized
+    // NOTE used to determine dependencies within a file context
+    t_CKUINT depend_init_where; // 1.5.0.8
+
     // documentation
     std::string doc;
 
+public:
     // constructor
     Chuck_Value( Chuck_Type * t, const std::string & n, void * a = NULL,
                  t_CKBOOL c = FALSE, t_CKBOOL acc = 0, Chuck_Namespace * o = NULL,
-                 Chuck_Type * oc = NULL, t_CKUINT s = 0 )
-    { type = t; SAFE_ADD_REF(type); // add reference
-      name = n; offset = s;
-      is_const = c; access = acc;
-      owner = o; SAFE_ADD_REF(o); // add reference
-      owner_class = oc; SAFE_ADD_REF(oc); // add reference
-      addr = a; is_member = FALSE;
-      is_static = FALSE; is_context_global = FALSE;
-      is_decl_checked = TRUE; // only set to false in certain cases
-      is_global = FALSE;
-      func_ref = NULL; func_num_overloads = 0; }
-
+                 Chuck_Type * oc = NULL, t_CKUINT s = 0 );
     // destructor
-    virtual ~Chuck_Value()
-    {
-        // release
-        // SAFE_RELEASE( type );
-        // SAFE_RELEASE( owner ):
-        // SAFE_RELEASE( owner_class );
-        // SAFE_RELEASE( func_ref );
-    }
+    virtual ~Chuck_Value();
 };
 
 
@@ -795,36 +1108,82 @@ struct Chuck_Func : public Chuck_VM_Object
     std::string name;
     // base name (without the designation, e.g., "dump"); 1.4.1.0
     std::string base_name;
-    // func def from parser
-    a_Func_Def def;
+    // get return type
+    Chuck_Type * type() const;
+    // human readable function signature: e.g., void Object.func( int foo, float bar[] );
+    std::string signature( t_CKBOOL incFunDef = TRUE, t_CKBOOL incRetType = TRUE ) const;
     // code (included imported)
     Chuck_VM_Code * code;
-    // imported code
-    // Chuck_DL_Func * dl_code;
-    // member
+    // member (inside class)
     t_CKBOOL is_member;
     // static (inside class)
     t_CKBOOL is_static;
     // virtual table index
     t_CKUINT vt_index;
-    // rember value
+    // remember value
     Chuck_Value * value_ref;
     // for overloading
     Chuck_Func * next;
     // for overriding
     Chuck_Value * up;
 
+    // (within-context, e.g., a ck file) dependency tracking | 1.5.0.8
+    Chuck_Value_Dependency_Graph depends;
+
     // documentation
     std::string doc;
 
+public:
+    // pack c-style array of DL_Args into args cache
+    t_CKBOOL pack_cache( Chuck_DL_Arg * dlargs, t_CKUINT numArgs );
+    // args cache (used by c++ to chuck function calls) | 1.5.1.5
+    t_CKBYTE * args_cache;
+    // size of args cache
+    t_CKUINT args_cache_size;
+    // setup invoker for this fun (for calling chuck function from c++)
+    t_CKBOOL setup_invoker( t_CKUINT vtable_offet, Chuck_VM * vm, Chuck_VM_Shred * shred );
+    // associate mfun invoker (if applicable)
+    Chuck_VM_MFunInvoker * invoker_mfun;
+
+protected:
+    // AST func def from parser | 1.5.0.5 (ge) moved to protected
+    // access through funcdef_*() functions
+    a_Func_Def m_def;
+
+public:
+    // connect (called when this func is type checked)
+    void funcdef_connect( a_Func_Def f );
+    // severe references to AST (called after compilation, before AST cleanup)
+    // make a fresh partial deep copy of m_def ONLY IF it is owned by AST
+    void funcdef_decouple_ast();
+    // cleanup funcdef (if/when this function is cleaned up)
+    void funcdef_cleanup();
+
+public:
+    // get the func def (do not keep a reference to this...
+    // as contents may shift during and after compilation)
+    a_Func_Def def() const { return m_def; }
+
+public:
     // constructor
-    Chuck_Func() { def = NULL; code = NULL; is_member = FALSE; is_static = FALSE,
-        vt_index = CK_NO_VALUE; value_ref = NULL; /*dl_code = NULL;*/ next = NULL;
-        up = NULL; }
+    Chuck_Func()
+    {
+        m_def = NULL;
+        code = NULL;
+        is_member = FALSE;
+        is_static = FALSE;
+        vt_index = CK_NO_VALUE;
+        value_ref = NULL;
+        /*dl_code = NULL;*/
+        next = NULL;
+        up = NULL;
+        args_cache = NULL;
+        args_cache_size = 0;
+        invoker_mfun = NULL;
+    }
 
     // destructor
-    virtual ~Chuck_Func()
-    { }
+    virtual ~Chuck_Func();
 };
 
 
@@ -834,9 +1193,9 @@ struct Chuck_Func : public Chuck_VM_Object
 // primary chuck type checker interface
 //-----------------------------------------------------------------------------
 // initialize the type engine
-Chuck_Env * type_engine_init( Chuck_Carrier * carrier );
+t_CKBOOL type_engine_init( Chuck_Carrier * carrier );
 // shutdown the type engine
-void type_engine_shutdown( Chuck_Env * env );
+void type_engine_shutdown( Chuck_Carrier * carrier );
 // load a context to be type-checked or emitted
 t_CKBOOL type_engine_load_context( Chuck_Env * env, Chuck_Context * context );
 // unload a context after being emitted
@@ -871,8 +1230,9 @@ t_CKBOOL isa( Chuck_Type * lhs, Chuck_Type * rhs );
 t_CKBOOL isprim( Chuck_Env * env, Chuck_Type * type );
 t_CKBOOL isobj( Chuck_Env * env, Chuck_Type * type );
 t_CKBOOL isfunc( Chuck_Env * env, Chuck_Type * type );
+t_CKBOOL isvoid( Chuck_Env * env, Chuck_Type * type );
 t_CKBOOL iskindofint( Chuck_Env * env, Chuck_Type * type ); // added 1.3.1.0: this includes int + pointers
-t_CKUINT getkindof( Chuck_Env * env, Chuck_Type * type ); // added 1.3.1.0: to get the kindof a type
+te_KindOf getkindof( Chuck_Env * env, Chuck_Type * type ); // added 1.3.1.0: to get the kindof a type
 
 
 //-----------------------------------------------------------------------------
@@ -919,6 +1279,8 @@ t_CKBOOL type_engine_import_ugen_ctrl( Chuck_Env * env, const char * type, const
                                        f_ctrl ctrl, t_CKBOOL write, t_CKBOOL read );
 t_CKBOOL type_engine_import_add_ex( Chuck_Env * env, const char * ex );
 t_CKBOOL type_engine_import_class_end( Chuck_Env * env );
+// add global operator overload | 1.5.1.5 (ge & andrew) chaos
+t_CKBOOL type_engine_import_op_overload( Chuck_Env * env, Chuck_DL_Func * func );
 t_CKBOOL type_engine_register_deprecate( Chuck_Env * env,
                                          const std::string & former, const std::string & latter );
 
@@ -940,8 +1302,20 @@ Chuck_Type  * type_engine_find_type( Chuck_Env * env, a_Id_List path );
 Chuck_Type  * type_engine_find_type( Chuck_Env * env, const std::string & name ); // 1.5.0.0 (ge) added
 Chuck_Value * type_engine_find_value( Chuck_Type * type, const std::string & xid );
 Chuck_Value * type_engine_find_value( Chuck_Type * type, S_Symbol xid );
-Chuck_Value * type_engine_find_value( Chuck_Env * env, const std::string & xid, t_CKBOOL climb, int linepos = 0 );
+Chuck_Value * type_engine_find_value( Chuck_Env * env, const std::string & xid, t_CKBOOL climb, t_CKBOOL stayWithClassDef = FALSE, int linepos = 0 );
 Chuck_Namespace * type_engine_find_nspc( Chuck_Env * env, a_Id_List path );
+// convert a vector of type names to a vector of Types | 1.5.0.0 (ge) added
+void type_engine_names2types( Chuck_Env * env, const std::vector<std::string> & typeNames, std::vector<Chuck_Type *> & types );
+// check and process auto types | 1.5.0.8 (ge) added
+t_CKBOOL type_engine_infer_auto( Chuck_Env * env, a_Exp_Decl decl, Chuck_Type * type );
+// initialize operator overload subsystem | 1.5.1.5 (ge) added
+t_CKBOOL type_engine_init_op_overload( Chuck_Env * env );
+// verify an operator overload | 1.5.1.5 (ge) added
+t_CKBOOL type_engine_scan_func_op_overload( Chuck_Env * env, a_Func_Def func_def );
+// type-check an operator overload func def | 1.5.1.5 (ge) added
+t_CKBOOL type_engine_check_func_op_overload( Chuck_Env * env, a_Func_Def func_def );
+
+
 
 
 //-----------------------------------------------------------------------------
@@ -979,37 +1353,6 @@ t_CKINT str2char( const char * char_lit, int linepos );
 t_CKBOOL same_arg_lists( a_Arg_List lhs, a_Arg_List rhs );
 // generate a string from an argument list (types only)
 std::string arglist2string( a_Arg_List list );
-
-
-//-----------------------------------------------------------------------------
-// REFACTOR-2017: exile! these default types now stored in env
-//-----------------------------------------------------------------------------
-//extern Chuck_Type t_void;
-//extern Chuck_Type t_int;
-//extern Chuck_Type t_float;
-//extern Chuck_Type t_time;
-//extern Chuck_Type t_dur;
-//extern Chuck_Type t_complex;
-//extern Chuck_Type t_polar;
-//extern Chuck_Type t_vec3; // ge: added 1.3.5.3
-//extern Chuck_Type t_vec4; // ge: added 1.3.5.3
-//extern Chuck_Type t_vector;
-//extern Chuck_Type t_object;
-//extern Chuck_Type t_null;
-//extern Chuck_Type t_string;
-//extern Chuck_Type t_array;
-//extern Chuck_Type t_shred;
-//extern Chuck_Type t_thread;
-//extern Chuck_Type t_function;
-//extern Chuck_Type t_class;
-//extern Chuck_Type t_event;
-//extern Chuck_Type t_io;
-//extern Chuck_Type t_fileio;
-//extern Chuck_Type t_chout;
-//extern Chuck_Type t_cherr;
-//extern Chuck_Type t_ugen;
-//extern Chuck_Type t_uana;
-//extern Chuck_Type t_uanablob;
 
 
 

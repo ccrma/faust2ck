@@ -81,8 +81,8 @@ public: // src
     t_CKBOOL set_is_buffered( t_CKBOOL buffered );
     void get_buffer( SAMPLE * buffer, t_CKINT num_elem );
 
-    Chuck_UGen *src_chan( t_CKUINT chan );
-    Chuck_UGen *dst_for_src_chan( t_CKUINT chan );
+    Chuck_UGen * src_chan( t_CKUINT chan );
+    Chuck_UGen * dst_for_src_chan( t_CKUINT chan );
 
 protected:
     t_CKVOID add_by( Chuck_UGen * dest, t_CKBOOL isUpChuck );
@@ -148,10 +148,6 @@ public: // data
     SAMPLE * m_sum_v;
     SAMPLE * m_current_v;
 
-    // the shred on which the ugen is created
-    Chuck_VM_Shred * shred;
-    // the vm on which the ugen is created
-    Chuck_VM * vm;
     // owner
     Chuck_UGen * owner;
 

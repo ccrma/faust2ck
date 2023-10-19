@@ -36,6 +36,7 @@
 #define __UTIL_BUFFERS_H__
 
 #include "chuck_oo.h"
+#include "chuck_errmsg.h"
 #ifndef __DISABLE_THREADS__
 #include "util_thread.h"
 #endif
@@ -134,6 +135,11 @@ protected:
     UINT__   m_read_offset;
     UINT__   m_write_offset;
     UINT__   m_max_elem;
+
+#ifndef __DISABLE_THREADS__
+    // added | 1.5.1.5 (ge & andrew) twilight zone
+    XMutex m_mutex;
+#endif
 };
 
 
@@ -203,38 +209,39 @@ template<typename T>
 class CircularBuffer
 {
 public:
-
     CircularBuffer(size_t numElements) :
-    m_read(0),
-    m_write(0),
-    m_numElements(numElements+1) // need 1 element to pad
+        m_read(0),
+        m_write(0),
+        m_numElements(numElements+1) // need 1 element to pad
     {
+        // allocate
         m_elements = new T[m_numElements];
     }
 
     ~CircularBuffer()
     {
-        if(m_elements != NULL)
-        {
-            delete[] m_elements;
-            m_elements = NULL;
-        }
+        CK_SAFE_DELETE_ARRAY( m_elements );
+        // if(m_elements != NULL)
+        // {
+        //    delete[] m_elements;
+        //    m_elements = NULL;
+        // }
     }
 
     // put one element
     // returns number of elements successfully put
     size_t put(T element)
     {
-        if((m_write + 1)%m_numElements == m_read)
+        // check for overflow
+        if( (m_write + 1)%m_numElements == m_read )
         {
-            // no space
+            // no space | 1.5.0.1 (ge) added log message
+            EM_log( CK_LOG_WARNING, "[circular-buffer]: buffer full, dropping items!" );
             return 0;
         }
 
         m_elements[m_write] = element;
-
         m_write = (m_write+1)%m_numElements;
-
         return 1;
     }
 
@@ -429,7 +436,7 @@ void XCircleBuffer<T>::init( long length )
     if( m_buffer )
     {
         // delete array - should call destructors and zero out variable
-        SAFE_DELETE_ARRAY( m_buffer );
+        CK_SAFE_DELETE_ARRAY( m_buffer );
         // zero out
         m_length = m_readIndex = m_writeIndex = m_numElements = 0;
     }
@@ -439,7 +446,7 @@ void XCircleBuffer<T>::init( long length )
     {
         // doh
         std::cerr << "[XCircleBuffer]: error invalid length '"
-        << length << "' requested" << std::endl;
+                  << length << "' requested" << std::endl;
 
         return;
     }
@@ -454,7 +461,7 @@ void XCircleBuffer<T>::init( long length )
     {
         // doh
         std::cerr << "[XCircleBuffer]: failed to allocate buffer of length '"
-        << length << "'..." << std::endl;
+                  << length << "'..." << std::endl;
 
         return;
     }
@@ -563,8 +570,8 @@ void XCircleBuffer<T>::put( const T & item )
     // if read and write pointer are the same, over-capacity
     if( m_writeIndex == m_readIndex )
     {
-        // warning
-        std::cerr << "[circular-buffer]: buffer full, dropping items!" << std::endl;
+        // warning | 1.5.0.1 (ge) make this a log message
+        EM_log( CK_LOG_WARNING, "[circular-buffer]: buffer full, dropping items!" );
         // advance read!
         advanceRead();
     }

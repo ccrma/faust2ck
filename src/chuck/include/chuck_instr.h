@@ -58,7 +58,7 @@ struct Chuck_Instr
 {
 public:
     Chuck_Instr();
-    virtual ~Chuck_Instr() { SAFE_DELETE(m_codestr); }
+    virtual ~Chuck_Instr();
 
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred ) = 0;
@@ -73,10 +73,16 @@ public:
     void set_linepos( t_CKUINT linepos );
     t_CKUINT m_linepos;
 
-    // set codestr associated with this instruction
-    void set_codestr( const std::string & str );
+    // prepend codestr associated with this instruction
+    void prepend_codestr( const std::string & str );
+    // append codestr associated with this instruction
+    void append_codestr( const std::string & str );
     // (used in instruction dump) | 1.5.0.0 (ge) added
-    std::string * m_codestr;
+    // (1.5.0.8) made this vector to support cases where there
+    // may be multiple code str, e.g., top of for-loops
+    std::vector<std::string> * m_codestr_pre;
+    // pre prints before the instruction; post prints after
+    std::vector<std::string> * m_codestr_post;
 };
 
 
@@ -89,6 +95,7 @@ public:
 struct Chuck_Instr_Branch_Op : public Chuck_Instr
 {
 public:
+    Chuck_Instr_Branch_Op() : m_jmp(0) { }
     inline void set( t_CKUINT jmp ) { m_jmp = jmp; }
 
 public:
@@ -109,6 +116,7 @@ protected:
 struct Chuck_Instr_Unary_Op : public Chuck_Instr
 {
 public:
+    Chuck_Instr_Unary_Op() : m_val(0) { }
     inline void set( t_CKUINT val ) { m_val = val; }
     inline t_CKUINT get() { return m_val; }
 
@@ -130,6 +138,7 @@ protected:
 struct Chuck_Instr_Unary_Op2 : public Chuck_Instr
 {
 public:
+    Chuck_Instr_Unary_Op2() : m_val(0) { }
     inline void set( t_CKFLOAT val ) { m_val = val; }
     inline t_CKFLOAT get() { return m_val; }
 
@@ -601,6 +610,71 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Add_vec2
+// desc: add two vec2 (ge) added 1.5.1.7 with the rise of the planet of ChuGL
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Add_vec2 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Minus_vec2
+// desc: subtract two vec2 (ge) added 1.5.1.7 with the rise of the planet of ChuGL
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Minus_vec2 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_float_Times_vec2
+// desc: float * vec2 (ge) added 1.5.1.7 with ChuGL
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_float_Times_vec2 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_vec2_Times_float
+// desc: vec2*float (ge) added 1.5.1.7 with ChuGL
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_vec2_Times_float : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_vec2_Divide_float
+// desc: divide two vec2 (ge) added 1.5.1.7 with ChuGL
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_vec2_Divide_float : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_Add_vec3
 // desc: add two vec3, 1.3.5.3
 //-----------------------------------------------------------------------------
@@ -991,6 +1065,32 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Add_vec2_Assign
+// desc: add assign two vec2
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Add_vec2_Assign : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Minus_vec2_Assign
+// desc: minus assign two vec2
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Minus_vec2_Assign : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_Add_vec3_Assign
 // desc: add assign two vec3
 //-----------------------------------------------------------------------------
@@ -1069,6 +1169,19 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_float_Times_vec2_Assign
+// desc: float *=> vec2
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_float_Times_vec2_Assign : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_float_Times_vec3_Assign
 // desc: ...
 //-----------------------------------------------------------------------------
@@ -1091,6 +1204,18 @@ public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
 };
 
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_vec2_Divide_float_Assign
+// desc: float /=> vec2
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_vec2_Divide_float_Assign : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
 
 
 
@@ -1643,6 +1768,32 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Eq_vec2
+// desc: vec2 == vec2 | 1.5.1.7 (ge) added
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Eq_vec2 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Neq_vec2
+// desc: vec2 != vec2 | 1.5.1.7 (ge) added
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Neq_vec2 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_Eq_vec3
 // desc: ...
 //-----------------------------------------------------------------------------
@@ -1891,10 +2042,10 @@ public:
 
 
 //-----------------------------------------------------------------------------
-// name: struct Chuck_Instr_Reg_Pop_Word
-// desc: pop word from reg stack
+// name: struct Chuck_Instr_Reg_Pop_Int
+// desc: pop an int from reg stack
 //-----------------------------------------------------------------------------
-struct Chuck_Instr_Reg_Pop_Word : public Chuck_Instr
+struct Chuck_Instr_Reg_Pop_Int : public Chuck_Instr
 {
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -1904,10 +2055,10 @@ public:
 
 
 //-----------------------------------------------------------------------------
-// name: struct Chuck_Instr_Reg_Pop_Word2
-// desc: pop t_CKFLOAT word from reg stack
+// name: struct Chuck_Instr_Reg_Pop_Float
+// desc: pop a float value from reg stack
 //-----------------------------------------------------------------------------
-struct Chuck_Instr_Reg_Pop_Word2 : public Chuck_Instr
+struct Chuck_Instr_Reg_Pop_Float : public Chuck_Instr
 {
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -1917,10 +2068,10 @@ public:
 
 
 //-----------------------------------------------------------------------------
-// name: struct Chuck_Instr_Reg_Pop_Word3
-// desc: pop a complex value from reg stack (change 1.3.1.0)
+// name: struct Chuck_Instr_Reg_Pop_Vec2ComplexPolar
+// desc: pop a complex/polar/vec2 value from reg stack (change 1.3.1.0)
 //-----------------------------------------------------------------------------
-struct Chuck_Instr_Reg_Pop_Word3 : public Chuck_Instr
+struct Chuck_Instr_Reg_Pop_Vec2ComplexPolar : public Chuck_Instr
 {
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -1930,13 +2081,52 @@ public:
 
 
 //-----------------------------------------------------------------------------
-// name: struct Chuck_Instr_Reg_Pop_Word4
+// name: struct Chuck_Instr_Reg_Pop_Vec2
+// desc: pop a vec2 value from reg stack | 1.5.1.7
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Reg_Pop_Vec2 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Reg_Pop_Vec3
+// desc: pop a vec3 value from reg stack | 1.5.1.5
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Reg_Pop_Vec3 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Reg_Pop_Vec4
+// desc: pop a vec4 value from reg stack | 1.5.1.5
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Reg_Pop_Vec4 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Reg_Pop_WordsMulti
 // desc: pop arbitrary num of word from reg stack (added 1.3.1.0)
 //-----------------------------------------------------------------------------
-struct Chuck_Instr_Reg_Pop_Word4 : public Chuck_Instr_Unary_Op
+struct Chuck_Instr_Reg_Pop_WordsMulti : public Chuck_Instr_Unary_Op
 {
 public:
-    Chuck_Instr_Reg_Pop_Word4( t_CKUINT num ) { this->set( num ); }
+    Chuck_Instr_Reg_Pop_WordsMulti( t_CKUINT num ) { this->set( num ); }
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
 };
 
@@ -2702,8 +2892,10 @@ struct Chuck_Instr_Alloc_Word_Global : public Chuck_Instr_Unary_Op
 public:
     // (added 1.3.0.0 -- is_object)
     Chuck_Instr_Alloc_Word_Global()
-    { this->set( 0 ); m_stack_offset = 0; m_chuck_type = NULL;
-      m_should_execute_ctors = FALSE; m_is_array = FALSE; }
+        : m_type(te_globalTypeNone), m_is_array(FALSE),
+        m_should_execute_ctors(FALSE),
+        m_stack_offset(0), m_chuck_type(NULL)
+    { this->set( 0 ); }
 
     virtual const char * params() const
     { static char buffer[CK_PRINT_BUF_LENGTH];
@@ -3026,11 +3218,11 @@ public:
 
 
 //-----------------------------------------------------------------------------
-// name: struct Chuck_Instr_Release_Object3_Pop_Word
+// name: struct Chuck_Instr_Release_Object3_Pop_Int
 // desc: release object reference + pop from reg stack | 1.5.0.0 (ge) added
 //       the variant assumes object pointer directly on stack (not offset)
 //-----------------------------------------------------------------------------
-struct Chuck_Instr_Release_Object3_Pop_Word : public Chuck_Instr
+struct Chuck_Instr_Release_Object3_Pop_Int : public Chuck_Instr
 {
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -3124,6 +3316,26 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Func_Call_Global
+// desc: imported global function call with return
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Func_Call_Global : public Chuck_Instr_Unary_Op
+{
+public:
+    Chuck_Instr_Func_Call_Global( t_CKUINT ret_size, Chuck_Func * func_ref )
+    { this->set( ret_size ); m_func_ref = func_ref; }
+
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+
+public:
+    Chuck_Func * m_func_ref;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_Func_Return
 // desc: ...
 //-----------------------------------------------------------------------------
@@ -3193,14 +3405,14 @@ public:
 
 
 //-----------------------------------------------------------------------------
-// name: struct Chuck_Instr_Array_Init
-// desc: for [ ... ] values
+// name: struct Chuck_Instr_Array_Init_Literal
+// desc: for [ ... ] array literal values
 //-----------------------------------------------------------------------------
-struct Chuck_Instr_Array_Init : public Chuck_Instr
+struct Chuck_Instr_Array_Init_Literal : public Chuck_Instr
 {
 public: // REFACTOR-2017: added env
-    Chuck_Instr_Array_Init( Chuck_Env * env, Chuck_Type * the_type, t_CKINT length );
-    virtual ~Chuck_Instr_Array_Init();
+    Chuck_Instr_Array_Init_Literal( Chuck_Env * env, Chuck_Type * the_type, t_CKINT length );
+    virtual ~Chuck_Instr_Array_Init_Literal();
 
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -3490,8 +3702,8 @@ protected:
 struct Chuck_Instr_Dot_Cmp_First : public Chuck_Instr
 {
 public:
-    Chuck_Instr_Dot_Cmp_First( t_CKUINT is_mem, t_CKUINT emit_addr )
-    { m_is_mem = is_mem; m_emit_addr = emit_addr; }
+    Chuck_Instr_Dot_Cmp_First( t_CKUINT is_mem, t_CKUINT emit_addr, te_KindOf kind )
+    { m_is_mem = is_mem; m_emit_addr = emit_addr; m_kind = kind; }
 
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -3503,6 +3715,7 @@ public:
 protected:
     t_CKUINT m_is_mem;
     t_CKUINT m_emit_addr;
+    te_KindOf m_kind;
 };
 
 
@@ -3515,8 +3728,8 @@ protected:
 struct Chuck_Instr_Dot_Cmp_Second : public Chuck_Instr
 {
 public:
-    Chuck_Instr_Dot_Cmp_Second( t_CKUINT is_mem, t_CKUINT emit_addr )
-    { m_is_mem = is_mem; m_emit_addr = emit_addr; }
+    Chuck_Instr_Dot_Cmp_Second( t_CKUINT is_mem, t_CKUINT emit_addr, te_KindOf kind )
+    { m_is_mem = is_mem; m_emit_addr = emit_addr; m_kind = kind; }
 
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -3528,6 +3741,7 @@ public:
 protected:
     t_CKUINT m_is_mem;
     t_CKUINT m_emit_addr;
+    te_KindOf m_kind;
 };
 
 
@@ -3540,8 +3754,8 @@ protected:
 struct Chuck_Instr_Dot_Cmp_Third : public Chuck_Instr
 {
 public:
-    Chuck_Instr_Dot_Cmp_Third( t_CKUINT is_mem, t_CKUINT emit_addr )
-    { m_is_mem = is_mem; m_emit_addr = emit_addr; }
+    Chuck_Instr_Dot_Cmp_Third( t_CKUINT is_mem, t_CKUINT emit_addr, te_KindOf kind )
+    { m_is_mem = is_mem; m_emit_addr = emit_addr; m_kind = kind; }
 
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -3553,6 +3767,7 @@ public:
 protected:
     t_CKUINT m_is_mem;
     t_CKUINT m_emit_addr;
+    te_KindOf m_kind;
 };
 
 
@@ -3565,8 +3780,8 @@ protected:
 struct Chuck_Instr_Dot_Cmp_Fourth : public Chuck_Instr
 {
 public:
-    Chuck_Instr_Dot_Cmp_Fourth( t_CKUINT is_mem, t_CKUINT emit_addr )
-    { m_is_mem = is_mem; m_emit_addr = emit_addr; }
+    Chuck_Instr_Dot_Cmp_Fourth( t_CKUINT is_mem, t_CKUINT emit_addr, te_KindOf kind )
+    { m_is_mem = is_mem; m_emit_addr = emit_addr; m_kind = kind; }
 
 public:
     virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
@@ -3578,6 +3793,7 @@ public:
 protected:
     t_CKUINT m_is_mem;
     t_CKUINT m_emit_addr;
+    te_KindOf m_kind;
 };
 
 
@@ -3870,6 +4086,58 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Cast_vec2tovec3
+// desc: cast frmo vec2 to vec3
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Cast_vec2tovec3 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Cast_vec2tovec4
+// desc: cast frmo vec2 to vec4
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Cast_vec2tovec4 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Cast_vec3tovec2
+// desc: cast frmo vec3 to vec2
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Cast_vec3tovec2 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_Cast_vec4tovec2
+// desc: cast frmo vec4 to vec2
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_Cast_vec4tovec2 : public Chuck_Instr
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_Cast_vec3tovec4
 // desc: cast frmo vec3 to vec4
 //-----------------------------------------------------------------------------
@@ -3977,6 +4245,33 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_ForEach_Inc_And_Branch
+// desc: for( VAR: ARRAY ) increment VAR, test against ARRAY size; branch
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_ForEach_Inc_And_Branch : public Chuck_Instr_Branch_Op
+{
+public:
+    // constructor
+    Chuck_Instr_ForEach_Inc_And_Branch( te_KindOf kind, t_CKUINT size )
+    { m_dataKind = kind; m_dataSize = size; this->set( 0 ); }
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+
+protected:
+    // type of VAR (will determine which array to operate on):
+    // kindof_INT
+    // kindof_FLOAT
+    // kindof_VEC2
+    // kindof_VEC3
+    // kindof_VEC4
+    te_KindOf m_dataKind;
+    // size of VAR
+    t_CKUINT m_dataSize;
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_IO_in_int
 // desc: ...
 //-----------------------------------------------------------------------------
@@ -4017,7 +4312,7 @@ public:
 
 //-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_IO_out_int
-// desc: ...
+// desc: insert int value into output stream
 //-----------------------------------------------------------------------------
 struct Chuck_Instr_IO_out_int : public Chuck_Instr_Binary_Op
 {
@@ -4030,7 +4325,7 @@ public:
 
 //-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_IO_out_float
-// desc: ...
+// desc: insert float value into output stream
 //-----------------------------------------------------------------------------
 struct Chuck_Instr_IO_out_float : public Chuck_Instr_Binary_Op
 {
@@ -4042,8 +4337,73 @@ public:
 
 
 //-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_IO_out_complex
+// desc: insert complex value into output stream
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_IO_out_complex : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_IO_out_polar
+// desc: insert polar value into output stream
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_IO_out_polar : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_IO_out_vec2
+// desc: insert vec2 value into output stream
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_IO_out_vec2 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_IO_out_vec3
+// desc: insert vec3 value into output stream
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_IO_out_vec3 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
+// name: struct Chuck_Instr_IO_out_vec4
+// desc: insert vec4 value into output stream
+//-----------------------------------------------------------------------------
+struct Chuck_Instr_IO_out_vec4 : public Chuck_Instr_Binary_Op
+{
+public:
+    virtual void execute( Chuck_VM * vm, Chuck_VM_Shred * shred );
+};
+
+
+
+
+//-----------------------------------------------------------------------------
 // name: struct Chuck_Instr_IO_out_string
-// desc: ...
+// desc: insert string value into output stream
 //-----------------------------------------------------------------------------
 struct Chuck_Instr_IO_out_string : public Chuck_Instr_Binary_Op
 {
@@ -4096,19 +4456,22 @@ protected:
 Chuck_Object * instantiate_and_initialize_object( Chuck_Type * type, Chuck_VM_Shred * shred );
 Chuck_Object * instantiate_and_initialize_object( Chuck_Type * type, Chuck_VM * vm );
 Chuck_Object * instantiate_and_initialize_object( Chuck_Type * type, Chuck_VM_Shred * shred, Chuck_VM * vm );
-// initialize object using Type
-t_CKBOOL initialize_object( Chuck_Object * obj, Chuck_Type * type );
-// "throw exception" (halt current shred, print message)
-void throw_exception(Chuck_VM_Shred * shred, const char * name);
-void throw_exception(Chuck_VM_Shred * shred, const char * name, t_CKINT desc);
-void throw_exception(Chuck_VM_Shred * shred, const char * name, t_CKFLOAT desc);
-void throw_exception(Chuck_VM_Shred * shred, const char * name, const char * desc);
+// initialize object using Type | 1.5.1.5 (ge) added setShredOrigin flag
+t_CKBOOL initialize_object( Chuck_Object * obj, Chuck_Type * type, Chuck_VM_Shred * shred, Chuck_VM * vm, t_CKBOOL setShredOrigin = FALSE );
 
+// "throw exception" (halt current shred, print message)
+void ck_throw_exception(Chuck_VM_Shred * shred, const char * name);
+void ck_throw_exception(Chuck_VM_Shred * shred, const char * name, t_CKINT desc);
+void ck_throw_exception(Chuck_VM_Shred * shred, const char * name, t_CKFLOAT desc);
+void ck_throw_exception(Chuck_VM_Shred * shred, const char * name, const char * desc);
+// handle overflow (halt current shred, print message + possible reason)
+void ck_handle_overflow( Chuck_VM_Shred * shred, Chuck_VM * vm, const std::string & reason = "" );
 
 // define SP offset
 #define push_( sp, val )         *(sp) = (val); (sp)++
 #define push_float( sp, val )    *((t_CKFLOAT *&)sp) = (val); ((t_CKFLOAT *&)sp)++
 #define push_complex( sp, val )  *((t_CKCOMPLEX *&)sp) = (val); ((t_CKCOMPLEX *&)sp)++
+#define push_vec2( sp, val )     *((t_CKVEC2 *&)sp) = (val); ((t_CKVEC2 *&)sp)++
 #define push_vec3( sp, val )     *((t_CKVEC3 *&)sp) = (val); ((t_CKVEC3 *&)sp)++
 #define push_vec4( sp, val )     *((t_CKVEC4 *&)sp) = (val); ((t_CKVEC4 *&)sp)++
 #define pop_( sp, n )            sp -= (n)
@@ -4117,6 +4480,9 @@ void throw_exception(Chuck_VM_Shred * shred, const char * name, const char * des
 // stack overflow detection
 #define overflow_( stack )       ( stack->sp > stack->sp_max )
 #define underflow_( stack )      ( stack->sp < stack->stack )
+// test if a particular sp would overflow the stack
+#define would_overflow_( sp, stack )  ( (t_CKBYTE *)(sp) > stack->sp_max )
+#define would_underflow_( sp, stack ) ( (t_CKBYTE *)(sp) < stack->stack )
 
 
 

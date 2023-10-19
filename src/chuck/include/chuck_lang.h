@@ -56,9 +56,11 @@ t_CKBOOL init_class_event( Chuck_Env * env, Chuck_Type * type );
 t_CKBOOL init_class_shred( Chuck_Env * env, Chuck_Type * type );
 t_CKBOOL init_class_string( Chuck_Env * env, Chuck_Type * type );
 t_CKBOOL init_class_array( Chuck_Env * env, Chuck_Type * type );
+t_CKBOOL init_class_vec2( Chuck_Env * env, Chuck_Type * type ); // 1.5.1.7
 t_CKBOOL init_class_vec3( Chuck_Env * env, Chuck_Type * type ); // 1.3.5.3
 t_CKBOOL init_class_vec4( Chuck_Env * env, Chuck_Type * type ); // 1.3.5.3
 t_CKBOOL init_class_type( Chuck_Env * env, Chuck_Type * type ); // 1.5.0.0
+t_CKBOOL init_class_function( Chuck_Env * env, Chuck_Type * type ); // 1.5.0.0
 t_CKBOOL init_primitive_types( Chuck_Env * env ); // 1.5.0.0
 
 
@@ -136,7 +138,7 @@ public:
 
 public:
     t_CKTIME & when();
-    Chuck_Array8 & fvals();
+    Chuck_ArrayFloat & fvals();
     Chuck_Array16 & cvals();
 
 public:
@@ -167,6 +169,10 @@ CK_DLL_MFUN( shred_sourcePath ); // added 1.3.0.0
 CK_DLL_MFUN( shred_sourceDir ); // added 1.3.0.0
 CK_DLL_MFUN( shred_sourceDir2 ); // added 1.3.2.0
 CK_DLL_SFUN( shred_fromId ); // added 1.3.2.0
+CK_DLL_MFUN( shred_ctrl_hintChildMemSize ); // added 1.5.1.5
+CK_DLL_MFUN( shred_cget_hintChildMemSize ); // added 1.5.1.5
+CK_DLL_MFUN( shred_ctrl_hintChildRegSize ); // added 1.5.1.5
+CK_DLL_MFUN( shred_cget_hintChildRegSize ); // added 1.5.1.5
 
 
 //-----------------------------------------------------------------------------
@@ -179,19 +185,22 @@ CK_DLL_MFUN( array_get_capacity );
 CK_DLL_MFUN( array_get_capacity_hack );
 CK_DLL_MFUN( array_set_size );
 CK_DLL_MFUN( array_get_size );
+CK_DLL_MFUN( array_insert );
 CK_DLL_MFUN( array_push_back );
 CK_DLL_MFUN( array_pop_back );
-CK_DLL_MFUN( array_pop_out );
 CK_DLL_MFUN( array_push_front );
 CK_DLL_MFUN( array_pop_front );
-CK_DLL_MFUN( array_find );
 CK_DLL_MFUN( array_erase );
+CK_DLL_MFUN( array_erase2 );
 CK_DLL_MFUN( array_clear );
 CK_DLL_MFUN( array_reset );
 CK_DLL_MFUN( array_zero );
 CK_DLL_MFUN( array_get_keys );
 CK_DLL_MFUN( array_reverse );
 CK_DLL_MFUN( array_shuffle );
+CK_DLL_MFUN( array_sort );
+CK_DLL_MFUN( array_map_find );
+CK_DLL_MFUN( array_map_erase );
 
 
 //-----------------------------------------------------------------------------
@@ -203,6 +212,7 @@ CK_DLL_MFUN( event_signal );
 CK_DLL_MFUN( event_broadcast );
 CK_DLL_MFUN( event_wait );
 CK_DLL_MFUN( event_can_wait );
+CK_DLL_MFUN( event_waiting_on );
 
 
 //-----------------------------------------------------------------------------
@@ -226,6 +236,7 @@ CK_DLL_MFUN( string_substringN);
 CK_DLL_MFUN( string_insert);
 CK_DLL_MFUN( string_replace);
 CK_DLL_MFUN( string_replaceN);
+CK_DLL_MFUN( string_replace_str);
 CK_DLL_MFUN( string_find);
 CK_DLL_MFUN( string_findStart);
 CK_DLL_MFUN( string_findStr);
@@ -241,8 +252,13 @@ CK_DLL_MFUN( string_parent);
 
 
 //-----------------------------------------------------------------------------
-// vector API (vec3, vec4, eventually vector) ge: 1.3.5.3
+// vector API (vec3, vec4, eventually vector) (ge) 1.3.5.3
+// add vec2 (ge) 1.5.1.7
 //-----------------------------------------------------------------------------
+CK_DLL_MFUN( vec2_set );
+CK_DLL_MFUN( vec2_setAll );
+CK_DLL_MFUN( vec2_magnitude );
+CK_DLL_MFUN( vec2_normalize );
 CK_DLL_MFUN( vec3_set );
 CK_DLL_MFUN( vec3_setAll );
 CK_DLL_MFUN( vec3_magnitude );
@@ -269,6 +285,7 @@ CK_DLL_MFUN( type_equals );
 CK_DLL_MFUN( type_isa );
 CK_DLL_MFUN( type_isa_str );
 CK_DLL_MFUN( type_name );
+CK_DLL_MFUN( type_basename );
 CK_DLL_MFUN( type_parent ); // return parent Type
 CK_DLL_MFUN( type_children ); // return children Types
 CK_DLL_MFUN( type_origin ); // built-in, chugin, defined in chuck
@@ -286,6 +303,7 @@ CK_DLL_SFUN( type_typeOf_polar ); // Type.typeOf( polar )
 CK_DLL_SFUN( type_typeOf_vec3 ); // Type.typeOf( vec3 )
 CK_DLL_SFUN( type_typeOf_vec4 ); // Type.typeOf( vec4 )
 CK_DLL_SFUN( type_getTypes );
+CK_DLL_SFUN( type_getTypes2 );
 CK_DLL_SFUN( type_getTypesAll );
 
 

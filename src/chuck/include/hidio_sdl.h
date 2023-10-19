@@ -92,8 +92,8 @@ public:
     ~HidIn();
 
 public:
-    t_CKBOOL open( Chuck_VM * vm, t_CKINT device_type, t_CKINT device_num );
-    t_CKBOOL open( Chuck_VM * vm, std::string & name, t_CKUINT device_type = CK_HID_DEV_COUNT );
+    t_CKBOOL open( Chuck_VM * vm, t_CKINT device_type, t_CKINT device_num, t_CKBOOL suppressErrMsg = FALSE );
+    t_CKBOOL open( Chuck_VM * vm, t_CKINT device_type /*= CK_HID_DEV_COUNT*/, std::string & name, t_CKBOOL suppressErrMsg = FALSE );
     t_CKBOOL close();
     t_CKBOOL read( t_CKINT type, t_CKINT num, HidMsg * msg );
     t_CKBOOL send( const HidMsg * msg );
@@ -126,16 +126,16 @@ class HidInManager
 public:
     static void init();
     static void init_default_drivers();
-    static void cleanup();
-    static t_CKBOOL open( HidIn * hin, Chuck_VM * vm, t_CKINT device_type, t_CKINT device_num );
-    static t_CKBOOL open( HidIn * hin, Chuck_VM * vm, t_CKINT device_type, std::string & device_name );
+    static void cleanup( t_CKUINT msWait = 0 );
+    static t_CKBOOL open( HidIn * hin, Chuck_VM * vm, t_CKINT device_type, t_CKINT device_num, t_CKBOOL suppressErrMsg = FALSE );
+    static t_CKBOOL open( HidIn * hin, Chuck_VM * vm, t_CKINT device_type, std::string & device_name, t_CKBOOL suppressErrMsg = FALSE );
     static t_CKBOOL close( HidIn * hin );
     static void cleanup_buffer( Chuck_VM * vm );
 
     static void probeHidIn();
     static void probeHidOut();
 
-#ifndef __PLATFORM_WIN32__
+#ifndef __PLATFORM_WINDOWS__
     static void * cb_hid_input( void * );
 #else
     static unsigned __stdcall cb_hid_input( void * );
