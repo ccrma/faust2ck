@@ -1,1 +1,1 @@
-freeverb.help();
+Flanger.help();

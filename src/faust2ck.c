@@ -573,7 +573,7 @@ int main(int argc, char *argv[])
         debugOption = "-g";
     
 #if defined(__APPLE__)
-    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -I.faust2ck_tmp -arch x86_64 -shared -O3 -fPIC %s -lc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "cc -I.faust2ck_tmp -arch x86_64 -arch arm64 -shared -O3 -fPIC %s -lc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
@@ -585,7 +585,7 @@ int main(int argc, char *argv[])
     }
     
 #elif defined(__linux__)
-    snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -D__PLATFORM_LINUX__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+    snprintf(cmd, BUF_SIZE, "cc -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
@@ -629,6 +629,8 @@ error:
     if(!leaveBuildProducts){
         system("cp .faust2ck_tmp/*cpp ./");
         system("rm -rf .faust2ck_tmp");
+        system("rm faust2ck.o");
+        system("rm *wrapper.cpp");
     }    
     if (fxml)
         fclose(fxml);
