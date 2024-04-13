@@ -629,6 +629,8 @@ error:
     if(!leaveBuildProducts){
         system("cp .faust2ck_tmp/*cpp ./");
         system("rm -rf .faust2ck_tmp");
+        system("rm faust2ck.o");
+        system("rm *wrapper.cpp");
     }    
     if (fxml)
         fclose(fxml);
