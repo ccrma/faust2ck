@@ -37,23 +37,7 @@ CK_DLL_MFUN(%dsp_name%_cget_%var_name%)\n\
 
 // built-in chuck headers
 char *chuck_dl_h[] = {
-#include "chuck_dl_h.h"
-    NULL
-};
-char *chuck_oo_h[] = {
-#include "chuck_oo_h.h"
-    NULL
-};
-char *chuck_def_h[] = {
-#include "chuck_def_h.h"
-    NULL
-};
-char *util_thread_h[] = {
-#include "util_thread_h.h"
-    NULL
-};
-char *chuck_carrier_h[] = {
-#include "chuck_carrier_h.h"
+#include "chugin.h"
     NULL
 };
 
@@ -464,41 +448,12 @@ int main(int argc, char *argv[])
     }
     
     /* write out headers to tmp directory */
-    if(!write_header(".faust2ck_tmp/chuck_dl.h", chuck_dl_h))
+    if(!write_header(".faust2ck_tmp/chugin.h", chuck_dl_h))
     {
         fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
         rc = 5;
         goto error;
     }
-    
-    if(!write_header(".faust2ck_tmp/chuck_def.h", chuck_def_h))
-    {
-        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
-        rc = 5;
-        goto error;
-    }
-    
-    if(!write_header(".faust2ck_tmp/chuck_oo.h", chuck_oo_h))
-    {
-        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
-        rc = 5;
-        goto error;
-    }
-    
-    if(!write_header(".faust2ck_tmp/util_thread.h", util_thread_h))
-    {
-        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
-        rc = 5;
-        goto error;
-    }
-    
-    if(!write_header(".faust2ck_tmp/chuck_carrier.h", chuck_carrier_h))
-    {
-        fprintf(stderr, "error: unable to write ChucK header file to temporary work directory\n");
-        rc = 5;
-        goto error;
-    }
-    
     
     /* generate path-less filename and basename */
     dspfilename = strrchr(inputArgument, '/');
@@ -640,25 +595,10 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-
-#elif defined(Win32) || defined(__CYGWIN__)
-    
-    snprintf(cmd, BUF_SIZE, "cd .faust2ck_tmp && cl.exe /nologo /MT /W3 /EHsc /O2 /I \".\" \
-    /D \"WIN32\" /D \"NDEBUG\" /D \"_WINDOWS\" /D \"_MBCS\" /D \"_USRDLL\" /D \"__PLATFORM_WIN32__\" /D \"__WINDOWS_DS__\" /FD \
-    \"%s.cpp\" /link kernel32.lib user32.lib /nologo /dll /machine:I386 /out:\"%s.chug\" && cp \"%s.chug\" ../",
-             dspfilename, basename, basename);
-    //printf("%s\n", cmd);
-    result = system(cmd);
-    if(result != 0)
-    {
-        fprintf(stderr, "error: unable to compile .cpp file\n");
-        rc = 5;
-        goto error;
-    }
     
 #else
 
-#error no target platform (e.g. Mac OS, Linux, or Win32)
+#error no target platform (e.g. Mac OS, Linux)
 
 #endif
     
@@ -686,9 +626,10 @@ error:
     
     /* clear tmp directory */
     
-    if(!leaveBuildProducts)
+    if(!leaveBuildProducts){
+        system("cp .faust2ck_tmp/*cpp ./");
         system("rm -rf .faust2ck_tmp");
-    
+    }    
     if (fxml)
         fclose(fxml);
 

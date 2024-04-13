@@ -1,5 +1,5 @@
-#include "chugin.h"
-// #include "chuck_dl.h"
+#include "chuck_def.h"
+#include "chuck_dl.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -13,6 +13,52 @@
 //-------------------------------------------------------------------
 // Generic min and max using C++ inline
 //-------------------------------------------------------------------
+
+#ifndef WIN32
+
+inline int      max (unsigned int a, unsigned int b) { return (a>b) ? a : b; }
+inline int      max (int a, int b)          { return (a>b) ? a : b; }
+
+inline long     max (long a, long b)        { return (a>b) ? a : b; }
+inline long     max (int a, long b)         { return (a>b) ? a : b; }
+inline long     max (long a, int b)         { return (a>b) ? a : b; }
+
+inline float    max (float a, float b)      { return (a>b) ? a : b; }
+inline float    max (int a, float b)        { return (a>b) ? a : b; }
+inline float    max (float a, int b)        { return (a>b) ? a : b; }
+inline float    max (long a, float b)       { return (a>b) ? a : b; }
+inline float    max (float a, long b)       { return (a>b) ? a : b; }
+
+inline double   max (double a, double b)    { return (a>b) ? a : b; }
+inline double   max (int a, double b)       { return (a>b) ? a : b; }
+inline double   max (double a, int b)       { return (a>b) ? a : b; }
+inline double   max (long a, double b)      { return (a>b) ? a : b; }
+inline double   max (double a, long b)      { return (a>b) ? a : b; }
+inline double   max (float a, double b)     { return (a>b) ? a : b; }
+inline double   max (double a, float b)     { return (a>b) ? a : b; }
+
+
+inline int      min (int a, int b)          { return (a<b) ? a : b; }
+
+inline long     min (long a, long b)        { return (a<b) ? a : b; }
+inline long     min (int a, long b)         { return (a<b) ? a : b; }
+inline long     min (long a, int b)         { return (a<b) ? a : b; }
+
+inline float    min (float a, float b)      { return (a<b) ? a : b; }
+inline float    min (int a, float b)        { return (a<b) ? a : b; }
+inline float    min (float a, int b)        { return (a<b) ? a : b; }
+inline float    min (long a, float b)       { return (a<b) ? a : b; }
+inline float    min (float a, long b)       { return (a<b) ? a : b; }
+
+inline double   min (double a, double b)    { return (a<b) ? a : b; }
+inline double   min (int a, double b)       { return (a<b) ? a : b; }
+inline double   min (double a, int b)       { return (a<b) ? a : b; }
+inline double   min (long a, double b)      { return (a<b) ? a : b; }
+inline double   min (double a, long b)      { return (a<b) ? a : b; }
+inline double   min (float a, double b)     { return (a<b) ? a : b; }
+inline double   min (double a, float b)     { return (a<b) ? a : b; }
+
+#endif // ndef WIN32
 
 inline int      lsr (int x, int n)          { return int(((unsigned int)x) >> n); }
 inline int      int2pow2 (int x)            { int r=0; while ((1<<r)<x) r++; return r; }
@@ -114,7 +160,7 @@ class dsp
 #define virtual
 
 /* Rename the class the name of our DSP. */
-#define mydsp %dsp_name%
+#define mydsp Panner
 
 /*
  * FAUST class
@@ -128,36 +174,36 @@ class dsp
 /*
  * ChucK glue code
  */
-static t_CKUINT %dsp_name%_offset_data = 0;
+static t_CKUINT Panner_offset_data = 0;
 static int g_sr = 44100;
 static int g_nChans = 1;
 
-CK_DLL_CTOR(%dsp_name%_ctor)
+CK_DLL_CTOR(Panner_ctor)
 {
     // return data to be used later
-    %dsp_name% *d = new %dsp_name%;
-    OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data) = (t_CKUINT)d;
+    Panner *d = new Panner;
+    OBJ_MEMBER_UINT(SELF, Panner_offset_data) = (t_CKUINT)d;
     d->init(g_sr);
     d->ck_frame_in = new SAMPLE*[g_nChans];
     d->ck_frame_out = new SAMPLE*[g_nChans];
 }
 
-CK_DLL_DTOR(%dsp_name%_dtor)
+CK_DLL_DTOR(Panner_dtor)
 {
-    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
+    Panner *d = (Panner*)OBJ_MEMBER_UINT(SELF, Panner_offset_data);
 
     delete[] d->ck_frame_in;
     delete[] d->ck_frame_out;
     
     delete d;
     
-    OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data) = 0;
+    OBJ_MEMBER_UINT(SELF, Panner_offset_data) = 0;
 }
 
 // mono tick
-CK_DLL_TICK(%dsp_name%_tick)
+CK_DLL_TICK(Panner_tick)
 {
-    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
+    Panner *d = (Panner*)OBJ_MEMBER_UINT(SELF, Panner_offset_data);
     
     d->ck_frame_in[0] = &in;
     d->ck_frame_out[0] = out;
@@ -168,9 +214,9 @@ CK_DLL_TICK(%dsp_name%_tick)
 }
 
 // multichannel tick
-CK_DLL_TICKF(%dsp_name%_tickf)
+CK_DLL_TICKF(Panner_tickf)
 {
-    %dsp_name% *d = (%dsp_name%*)OBJ_MEMBER_UINT(SELF, %dsp_name%_offset_data);
+    Panner *d = (Panner*)OBJ_MEMBER_UINT(SELF, Panner_offset_data);
     
     for(int f = 0; f < nframes; f++)
     {
@@ -187,33 +233,53 @@ CK_DLL_TICKF(%dsp_name%_tickf)
     return TRUE;
 }
 
-%ctrl_cget_functions%
+CK_DLL_MFUN(Panner_ctrl_fHslider0)
+{
+    Panner *d = (Panner*)OBJ_MEMBER_UINT(SELF, Panner_offset_data);
+    d->fHslider0 = (SAMPLE)GET_CK_FLOAT(ARGS);
+    RETURN->v_float = (t_CKFLOAT)(d->fHslider0);
+}
 
-CK_DLL_QUERY(%dsp_name%_query)
+CK_DLL_MFUN(Panner_cget_fHslider0)
+{
+    Panner *d = (Panner*)OBJ_MEMBER_UINT(SELF, Panner_offset_data);
+    RETURN->v_float = (t_CKFLOAT)(d->fHslider0);
+}
+
+
+
+
+CK_DLL_QUERY(Panner_query)
 {
     g_sr = QUERY->srate;
 
-	%dsp_name% temp; // needed to get IO channel count
+	Panner temp; // needed to get IO channel count
 
-    QUERY->setname(QUERY, "%dsp_name%");
+    QUERY->setname(QUERY, "Panner");
     
-    QUERY->begin_class(QUERY, "%dsp_name%", "UGen");
+    QUERY->begin_class(QUERY, "Panner", "UGen");
     
-    QUERY->add_ctor(QUERY, %dsp_name%_ctor);
-    QUERY->add_dtor(QUERY, %dsp_name%_dtor);
+    QUERY->add_ctor(QUERY, Panner_ctor);
+    QUERY->add_dtor(QUERY, Panner_dtor);
     
-    g_nChans = std::max(temp.getNumInputs(), temp.getNumOutputs());
+    g_nChans = max(temp.getNumInputs(), temp.getNumOutputs());
     
     if(g_nChans == 1)
-        QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
+        QUERY->add_ugen_func(QUERY, Panner_tick, NULL, g_nChans, g_nChans);
     else
-        QUERY->add_ugen_funcf(QUERY, %dsp_name%_tickf, NULL, g_nChans, g_nChans);
+        QUERY->add_ugen_funcf(QUERY, Panner_tickf, NULL, g_nChans, g_nChans);
 
     // add member variable
-    %dsp_name%_offset_data = QUERY->add_mvar( QUERY, "int", "@%dsp_name%_data", FALSE );
-    if( %dsp_name%_offset_data == CK_INVALID_OFFSET ) goto error;
+    Panner_offset_data = QUERY->add_mvar( QUERY, "int", "@Panner_data", FALSE );
+    if( Panner_offset_data == CK_INVALID_OFFSET ) goto error;
 
-    %ctrl_cget_query%
+    
+    QUERY->add_mfun( QUERY, Panner_cget_fHslider0 , "float", "pan" );
+    
+    QUERY->add_mfun( QUERY, Panner_ctrl_fHslider0 , "float", "pan" );
+    QUERY->add_arg( QUERY, "float", "pan" );
+    
+
 
     // end import
 	QUERY->end_class(QUERY);
