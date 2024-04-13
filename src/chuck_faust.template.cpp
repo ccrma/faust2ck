@@ -1,6 +1,5 @@
-
-#include "chuck_def.h"
-#include "chuck_dl.h"
+#include "chugin.h"
+// #include "chuck_dl.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -14,52 +13,6 @@
 //-------------------------------------------------------------------
 // Generic min and max using C++ inline
 //-------------------------------------------------------------------
-
-#ifndef WIN32
-
-inline int      max (unsigned int a, unsigned int b) { return (a>b) ? a : b; }
-inline int      max (int a, int b)          { return (a>b) ? a : b; }
-
-inline long     max (long a, long b)        { return (a>b) ? a : b; }
-inline long     max (int a, long b)         { return (a>b) ? a : b; }
-inline long     max (long a, int b)         { return (a>b) ? a : b; }
-
-inline float    max (float a, float b)      { return (a>b) ? a : b; }
-inline float    max (int a, float b)        { return (a>b) ? a : b; }
-inline float    max (float a, int b)        { return (a>b) ? a : b; }
-inline float    max (long a, float b)       { return (a>b) ? a : b; }
-inline float    max (float a, long b)       { return (a>b) ? a : b; }
-
-inline double   max (double a, double b)    { return (a>b) ? a : b; }
-inline double   max (int a, double b)       { return (a>b) ? a : b; }
-inline double   max (double a, int b)       { return (a>b) ? a : b; }
-inline double   max (long a, double b)      { return (a>b) ? a : b; }
-inline double   max (double a, long b)      { return (a>b) ? a : b; }
-inline double   max (float a, double b)     { return (a>b) ? a : b; }
-inline double   max (double a, float b)     { return (a>b) ? a : b; }
-
-
-inline int      min (int a, int b)          { return (a<b) ? a : b; }
-
-inline long     min (long a, long b)        { return (a<b) ? a : b; }
-inline long     min (int a, long b)         { return (a<b) ? a : b; }
-inline long     min (long a, int b)         { return (a<b) ? a : b; }
-
-inline float    min (float a, float b)      { return (a<b) ? a : b; }
-inline float    min (int a, float b)        { return (a<b) ? a : b; }
-inline float    min (float a, int b)        { return (a<b) ? a : b; }
-inline float    min (long a, float b)       { return (a<b) ? a : b; }
-inline float    min (float a, long b)       { return (a<b) ? a : b; }
-
-inline double   min (double a, double b)    { return (a<b) ? a : b; }
-inline double   min (int a, double b)       { return (a<b) ? a : b; }
-inline double   min (double a, int b)       { return (a<b) ? a : b; }
-inline double   min (long a, double b)      { return (a<b) ? a : b; }
-inline double   min (double a, long b)      { return (a<b) ? a : b; }
-inline double   min (float a, double b)     { return (a<b) ? a : b; }
-inline double   min (double a, float b)     { return (a<b) ? a : b; }
-
-#endif // ndef WIN32
 
 inline int      lsr (int x, int n)          { return int(((unsigned int)x) >> n); }
 inline int      int2pow2 (int x)            { int r=0; while ((1<<r)<x) r++; return r; }
@@ -249,7 +202,7 @@ CK_DLL_QUERY(%dsp_name%_query)
     QUERY->add_ctor(QUERY, %dsp_name%_ctor);
     QUERY->add_dtor(QUERY, %dsp_name%_dtor);
     
-    g_nChans = max(temp.getNumInputs(), temp.getNumOutputs());
+    g_nChans = std::max(temp.getNumInputs(), temp.getNumOutputs());
     
     if(g_nChans == 1)
         QUERY->add_ugen_func(QUERY, %dsp_name%_tick, NULL, g_nChans, g_nChans);
