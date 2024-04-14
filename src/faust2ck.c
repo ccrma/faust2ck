@@ -393,6 +393,7 @@ int main(int argc, char *argv[])
     int leaveBuildProducts = 0;
     int f2ckDebug = 0;
     out = stdout;
+    int sourceCode = 0;
 
     variables.next = NULL;
     
@@ -408,6 +409,10 @@ int main(int argc, char *argv[])
         {
             leaveBuildProducts = 1;
             f2ckDebug = 1;
+        }
+        else if(strcmp("-cpp", argv[i]) == 0)
+        {
+            sourceCode = 1;
         }
         else if(inputArgument == NULL)
         {
@@ -553,27 +558,29 @@ int main(int argc, char *argv[])
     
     
     /* compile FAUST input with customized arch file */
-    
-    snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
-             outfilename, dspfilename, dspfilename);
-    //printf("%s\n", cmd);
-    result = system(cmd);
-    if(result != 0)
+    if(!sourceCode)
     {
-        fprintf(stderr, "error: unable to generate .cpp file\n");
-        rc = 5;
-        goto error;
+        snprintf(cmd, BUF_SIZE, "faust -a '%s' -o '.faust2ck_tmp/%s.cpp' '.faust2ck_tmp/%s'",
+                outfilename, dspfilename, dspfilename);
+        //printf("%s\n", cmd);
+        result = system(cmd);
+        if(result != 0)
+        {
+            fprintf(stderr, "error: unable to generate .cpp file\n");
+            rc = 5;
+            goto error;
+        }
     }
-    
     
     /* compile the resulting FAUST output with platform specific compiler */
     
     const char *debugOption = "";
     if(f2ckDebug)
         debugOption = "-g";
-    
+
 #if defined(__APPLE__)
-    snprintf(cmd, BUF_SIZE, "cc -D__MACOSX_CORE__ -I.faust2ck_tmp -arch x86_64 -shared -O3 -fPIC %s -lc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+if(!sourceCode){
+    snprintf(cmd, BUF_SIZE, "cc -I.faust2ck_tmp -arch x86_64 -arch arm64 -shared -O3 -fPIC %s -lc++ -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
              debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
@@ -583,10 +590,26 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
+}
     
 #elif defined(__linux__)
-    snprintf(cmd, BUF_SIZE, "cc -D__LINUX_ALSA__ -D__PLATFORM_LINUX__ -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
-             debugOption, basename, dspfilename);
+if(!sourceCode){
+    snprintf(cmd, BUF_SIZE, "cc -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+        debugOption, basename, dspfilename);
+    //printf("%s\n", cmd);
+    result = system(cmd);
+    if(result != 0)
+    {
+        fprintf(stderr, "error: unable to compile .cpp file\n");
+        rc = 5;
+        goto error;
+    } 
+}
+
+#elif defined(_WIN32)
+if(!sourceCode){
+    snprintf(cmd, BUF_SIZE, "cc -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
+        debugOption, basename, dspfilename);
     //printf("%s\n", cmd);
     result = system(cmd);
     if(result != 0)
@@ -595,7 +618,7 @@ int main(int argc, char *argv[])
         rc = 5;
         goto error;
     }
-    
+}
 #else
 
 #error no target platform (e.g. Mac OS, Linux)
@@ -629,8 +652,6 @@ error:
     if(!leaveBuildProducts){
         system("cp .faust2ck_tmp/*cpp ./");
         system("rm -rf .faust2ck_tmp");
-        system("rm faust2ck.o");
-        system("rm *wrapper.cpp");
     }    
     if (fxml)
         fclose(fxml);
