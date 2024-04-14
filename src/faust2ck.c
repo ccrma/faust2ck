@@ -383,6 +383,7 @@ int main(int argc, char *argv[])
 #define BUF_SIZE 1024
     char *inputArgument = NULL;
     char cmd[BUF_SIZE];
+    char cmdChuginate[BUF_SIZE];
     char xmlfilepath[BUF_SIZE];
     char *dspfilename;
     char basename[BUF_SIZE];
@@ -609,9 +610,10 @@ if(!sourceCode){
 #elif defined(_WIN32)
 if(sourceCode){
     /* VSCode project */
-    snprintf(cmdChuginate,BUF_SIZE,"./chuginate/chuginate %s && cp %s.dsp.cpp .q/chuginate/%s.cpp",
+    snprintf(cmdChuginate,BUF_SIZE,"./chuginate/chuginate %s && cp %s.dsp.cpp %s/%s.cpp",
+        basename,basename,basename,basename);
+    system(cmdChuginate);,
         basename,basename,basename);
-    system(cmdChuginate);
 }
 #else
 
