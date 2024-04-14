@@ -607,17 +607,11 @@ if(!sourceCode){
 }
 
 #elif defined(_WIN32)
-if(!sourceCode){
-    snprintf(cmd, BUF_SIZE, "cc -I.faust2ck_tmp -shared -fPIC -O3 -lstdc++ %s -o '%s.chug' '.faust2ck_tmp/%s.cpp'",
-        debugOption, basename, dspfilename);
-    //printf("%s\n", cmd);
-    result = system(cmd);
-    if(result != 0)
-    {
-        fprintf(stderr, "error: unable to compile .cpp file\n");
-        rc = 5;
-        goto error;
-    }
+if(sourceCode){
+    /* VSCode project */
+    snprintf(cmdChuginate,BUF_SIZE,"./chuginate/chuginate %s && cp %s.dsp.cpp .q/chuginate/%s.cpp",
+        basename,basename,basename);
+    system(cmdChuginate);
 }
 #else
 
