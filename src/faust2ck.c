@@ -14,6 +14,7 @@ char *ctrl_cget_query[] = {"\n\
     \n\
     QUERY->add_mfun( QUERY, %dsp_name%_ctrl_%var_name% , \"float\", \"%var_label%\" );\n\
     QUERY->add_arg( QUERY, \"float\", \"%var_label%\" );\n\
+    QUERY->doc_func(QUERY, \"float value controls %var_label%\" );\n\
     ",
     NULL
 };
@@ -608,13 +609,11 @@ if(!sourceCode){
 }
 
 #elif defined(_WIN32)
-if(sourceCode){
     /* VSCode project */
     snprintf(cmdChuginate,BUF_SIZE,"./chuginate/chuginate %s && cp %s.dsp.cpp %s/%s.cpp",
         basename,basename,basename,basename);
     system(cmdChuginate);,
         basename,basename,basename);
-}
 #else
 
 #error no target platform (e.g. Mac OS, Linux)
