@@ -20,7 +20,7 @@ $(CHUCK_HEADER_HEADERS): %.h: cheaders/include/%.h
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -rf faust2ck *.o chuck_faust.template.h $(CHUCK_HEADER_HEADERS)
+	rm -rf faust2ck *.o chuck_faust.template.h $(CHUCK_HEADER_HEADERS) 
 
 install: faust2ck
 	cp -f faust2ck /usr/local/bin/

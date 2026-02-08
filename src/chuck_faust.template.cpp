@@ -1,5 +1,4 @@
 #include "chugin.h"
-// #include "chuck_dl.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -191,7 +190,9 @@ CK_DLL_TICKF(%dsp_name%_tickf)
 
 CK_DLL_QUERY(%dsp_name%_query)
 {
-    g_sr = QUERY->srate;
+    Chuck_VM* VM = QUERY->ck_vm(QUERY);
+    CK_DL_API API = QUERY->ck_api(QUERY);
+    g_sr = API->vm->srate(VM);
 
 	%dsp_name% temp; // needed to get IO channel count
 

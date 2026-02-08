@@ -8,4 +8,15 @@ src/faust2ck.exe
 
 *.chug
 
-src/chuck_faust.template.h
+<<<<<<< HEAD
+builds
+.vscode
+
+test_report.txt
+
+TODO
+
+
+Faust2chuck-linux.zip
+Faust2chuck-mac.zip
+Faust2chuck-win.zip

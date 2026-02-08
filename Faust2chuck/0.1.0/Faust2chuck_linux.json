@@ -1,0 +1,19 @@
+{
+    "arch": "x86_64",
+    "files": [
+        {
+            "checksum": "76fab42dcffca3d50787395a5304db388a404d9f5ac1b18eae8a64ca8a27a825",
+            "file_type": "zip",
+            "local_dir": "./",
+            "url": "https://ccrma.stanford.edu/~celeste/chump/faust2ck/0.1.0/faust2ck-linux.zip"
+        }
+    ],
+    "language_version_min": {
+        "major": 5,
+        "mega": 1,
+        "minor": 2,
+        "patch": 5
+    },
+    "os": "linux",
+    "version": "0.1.0"
+}
