@@ -1,0 +1,16 @@
+{
+    "authors": [
+        "Grame-CNCM"
+    ],
+    "description": "Faust examples as Chugins for ChucK: https://faustdoc.grame.fr/examples  we have not fully tested them yet, use at you own risk.",
+    "homepage": "https://github.com/ccrma/faust2ck",
+    "keywords": [
+        "Faust",
+        "UGen",
+        "a lot of stuff",
+        "DSPs and other efxs"
+    ],
+    "license": "GNU GPLv2.1",
+    "name": "Faust2chuck",
+    "repository": "https://github.com/ccrma/faust2ck"
+}

@@ -8,6 +8,14 @@ src/faust2ck.exe
 
 *.chug
 
+builds
 .vscode
 
 test_report.txt
+
+TODO
+
+
+Faust2chuck-linux.zip
+Faust2chuck-mac.zip
+Faust2chuck-win.zip
