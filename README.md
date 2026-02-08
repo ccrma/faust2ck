@@ -55,15 +55,46 @@ When you execute faust2ck with a suitable .dsp file:
 
 $ faust2ck filename.dsp
 
-it will generate a ChuGin called "filename.chug". You can load this into ChucK
-with the -g option:
+it will generate a ChuGin called "filename.chug", copy this in your own path.
 
-$ chuck -gfilename
+## New Build System & Examples
+==========================
 
-but chuck will exit immediately because you haven't provided it with a script
-to run. If you want to load your new ChuGin without the annoying -g option, 
-simply copy it to your ChuGin directory (typically /usr/local/lib/chuck). 
+This repository has been updated with a comprehensive build system and a vast collection of examples.
 
+### Features
+
+1.  **Automated Build Workflow**:
+    -   A top-level `Makefile` now handles the entire process.
+    -   Simply run `make` in the root directory.
+    -   This will compile the `faust2ck` tool and then automatically process all `.dsp` files found in the `dsp/` directory.
+
+2.  **Organized Output**:
+    -   All build artifacts are placed in the `builds/` directory.
+    -   Each DSP file gets its own subdirectory (e.g., `builds/Freeverb/`).
+    -   Contains the generated Chugin (`.chug`), the C++ wrapper, and an automatically generated test file.
+
+3.  **Example Library**:
+    -   The `dsp/` folder has been populated with over 200 examples from the [official Faust documentation](https://faustdoc.grame.fr/examples/).
+    -   These cover a wide range of categories: Synths, Effects, Physical Modeling, and more.
+
+4.  **Test Suite**:
+    -   A `test_suite.sh` script is provided to verify all generated examples.
+    -   It runs `chuck --silent` on every generated test file to ensure they load and run without crashing.
+    -   Generates a `test_report.txt` with the results.
+
+### Quick Start
+
+```bash
+# 1. Build everything (Tool + Examples)
+make
+
+# 2. Run the test suite
+./test_suite.sh
+
+# 3. Check the report
+cat test_report.txt
+```
 
 ## Included Examples
 -- Still to be tested, please report any issues --
