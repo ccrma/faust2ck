@@ -21,24 +21,22 @@ https://faustide.grame.fr/
 
 This document describes how to use faust2ck.
 
-This code is directly based off of Scott Sinclair's original faust2ck, 
-without which this latest iteration would not exist.
+This code is directly based off of Scott Sinclair's original faust2ck and
+a more mature version thanks to Spencer Salazar.
+without which this latest iteration would not exist. 
+
 
 ## Build/Install
 =============
 
 To build faust2ck, first download the source:
 
-$ git clone https://github.com/spencersalazar/faust2ck.git
+$ git clone https://github.com/ccrma/faust2ck
 
 Then compile:
 
-$ cd faust2ck/src
+$ cd faust2ck
 $ make
-
-Then install!
-
-$ sudo make install
 
 ## Usage
 =====
@@ -67,5 +65,236 @@ to run. If you want to load your new ChuGin without the annoying -g option,
 simply copy it to your ChuGin directory (typically /usr/local/lib/chuck). 
 
 
+## Included Examples
+-- Still to be tested, please report any issues --
 
-
+- 1dDampedWaveEquation -
+- 2massChain -
+- AcGuitar -
+- AdditiveSynth_Analog -
+- AdditiveSynth -
+- APF -
+- AudioParamOsc -
+- Autopan -
+- BandFilter -
+- Bells -
+- BlowBottle -
+- BouncingOsc -
+- Bowed -
+- BowedOsc -
+- BowedString -
+- BPF -
+- Brass -
+- BrassMIDI -
+- BrightOrgan -
+- Bubble -
+- Capture -
+- ChorusForBrowser -
+- ChurchBell -
+- ChurchOrgan -
+- Clarinet -
+- ClarinetMIDI -
+- Complex_rain -
+- Compressor -
+- Construction -
+- ControllableNonPhysicalString -
+- CrazyGuiro -
+- CrossDelay2 -
+- CryBaby -
+- Dattorro -
+- DiodeLadder -
+- Distortion -
+- DjembeMIDI -
+- DNN -
+- Door -
+- Drumkit -
+- Drums -
+- DubDub -
+- Dx7 -
+- DX7 -
+- Echo -
+- EchoForBrowser -
+- EffectsForBrowser -
+- ElecGuitar -
+- ElecGuitarEffect -
+- ElecGuitarMIDI -
+- EnglishBell -
+- Fact -
+- FastOsc -
+- FdnRev -
+- FFT -
+- FilterBank -
+- FilterOsc -
+- Fire -
+- Flanger -
+- FlangerForBrowser -
+- Flute -
+- FluteMIDI -
+- FluteStk -
+- Fm -
+- FMSynth2_Analog -
+- FMSynth2 -
+- FMSynth2_FX_Analog -
+- FMSynth2_FX -
+- Fold -
+- FourSourcesToOcto -
+- Freeverb -
+- FreeverbForBrowser -
+- FrenchBell -
+- Frog -
+- FXChaine2 -
+- GateCompressor -
+- GermanBell -
+- GlassHarmonica -
+- GrainGenerator -
+- Granulator -
+- GraphicEqLab -
+- Greyhole -
+- Guitarix -
+- GuitarMIDI -
+- HammeredString -
+- HammerOsc -
+- HarmonicExciter -
+- HarmonicOscillator2 -
+- HarmonicOscillator3 -
+- HarmonicOscillator -
+- Harp -
+- Harpe -
+- HighShelf -
+- HPF -
+- Inlooper -
+- Insects -
+- Jprev -
+- Karplus32 -
+- Karplus -
+- Kb_rom_rev1 -
+- Korg35HPF -
+- Korg35LPF -
+- LfBoost -
+- LowBoost -
+- LowCut -
+- LowShelf -
+- LPF -
+- MarimbaMIDI -
+- Matrix -
+- Mesh -
+- ModularInterpInstrMIDI -
+- MoogHalfLadder -
+- MoogLadder -
+- MoogVCF -
+- MultiSynth -
+- MyEffect -
+- NLFeks -
+- NLFfm -
+- NlOsc -
+- Noise -
+- NoiseGate -
+- NoiseMetadata -
+- Noop -
+- Notch -
+- NylonGuitarMIDI -
+- OberheimBPF -
+- OberheimBSF -
+- Oberheim -
+- OberheimHPF -
+- OberheimLPF -
+- OneSourceToStereo -
+- Osc -
+- Osci -
+- Panner -
+- Panpot -
+- Paradigma -
+- ParametricEqLab -
+- ParametricEqualizer -
+- ParamOsc -
+- PeakingEQ -
+- PeakNotch -
+- Phaser -
+- PhaserFlangerLab -
+- PhysicalLFO -
+- PianoHammeredString -
+- PitchShifter -
+- PluckedOsc -
+- PluckedString -
+- PolyTriangle -
+- QuadEcho -
+- QuantizedChords -
+- Rain -
+- Ramp -
+- Repeater -
+- ReverbDesigner -
+- Reverb -
+- ReverbTank -
+- ReverbTester -
+- RussianBell -
+- SallenKey2ndOrderBPF -
+- SallenKey2ndOrder -
+- SallenKey2ndOrderHPF -
+- SallenKey2ndOrderLPF -
+- SallenKeyOnePole -
+- SallenKeyOnePoleHPF -
+- SallenKeyOnePoleLPF -
+- SawtoothLab -
+- Sawtooth_synth -
+- Saxophony -
+- Serial -
+- SimpleFX_Analog -
+- SimpleFX -
+- SimpleSynth_Analog -
+- SimpleSynth -
+- SimpleSynth_FX_Analog -
+- SimpleSynth_FX -
+- Sine_synth -
+- Sitar -
+- SmoothDelay -
+- Spat -
+- SpectralLevel -
+- SpectralTilt -
+- SpectralTiltLab -
+- StandardBell -
+- Statespace -
+- StereoEcho -
+- StiffString -
+- Sum -
+- Switcher -
+- Tapiir -
+- Target -
+- Tester2 -
+- Tester -
+- Thunder -
+- TibetanBowl -
+- TinyString -
+- Toy -
+- TriangleMesh -
+- Trill_simple_monophonic_keyboard -
+- Trill_simple_polyphonic_keyboard -
+- Trumpet -
+- TunedBar -
+- Turenas -
+- UniBar -
+- VcfWahLab -
+- Violin2 -
+- Violin -
+- ViolinMIDI -
+- VirtualAnalog -
+- VirtualAnalogForBrowser -
+- VirtualAnalogLab -
+- VirtualAnalogWithEffectsForBrowser -
+- Vital_rev -
+- VocalBP -
+- VocalBPMIDI -
+- Vocal -
+- VocalFOF -
+- VocalFOFMIDI -
+- Vocoder -
+- Wah -
+- WahPedal -
+- WaveSynth_Analog -
+- WaveSynth -
+- WaveSynth_FX_Analog -
+- WaveSynth_FX -
+- Wfs -
+- Windchimes -
+- Wind -
+- ZitaRev -
+- ZitaRevFDN -
