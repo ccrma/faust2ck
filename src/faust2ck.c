@@ -564,6 +564,7 @@ int main(int argc, char *argv[]) {
 #else
 
 #error no target platform (e.g. Mac OS, Linux)
+#error no target platform (e.g. Mac OS, Linux)
 
 #endif
 
@@ -610,3 +611,4 @@ error:
 
   return rc;
 }
+

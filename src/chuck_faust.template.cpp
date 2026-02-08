@@ -199,6 +199,8 @@ CK_DLL_QUERY(%dsp_name%_query)
     QUERY->setname(QUERY, "%dsp_name%");
     
     QUERY->begin_class(QUERY, "%dsp_name%", "UGen");
+    QUERY->doc_class(QUERY, "%dsp_name%");
+    QUERY->add_ex(QUERY, "%dsp_name%-test.ck");
     
     QUERY->add_ctor(QUERY, %dsp_name%_ctor);
     QUERY->add_dtor(QUERY, %dsp_name%_dtor);
