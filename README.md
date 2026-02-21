@@ -29,14 +29,19 @@ without which this latest iteration would not exist.
 ## Build/Install
 =============
 
-To build faust2ck, first download the source:
+To build faust2ck, first download the source and initialize all submodules:
 
+```bash
 $ git clone https://github.com/ccrma/faust2ck
+$ cd faust2ck
+$ git submodule update --init --recursive
+```
 
 Then compile:
 
-$ cd faust2ck
+```bash
 $ make
+```
 
 ## Usage
 =====
